@@ -67,11 +67,9 @@ def ip_model(grid, random_grid, steps, vegf_threshold):
         if new_growth_sites:
             # Find the possible site with the lowest random number to be occupied
             min_random_site = min(new_growth_sites, key=lambda site: site[2])
-            x, y, _ = min_random_site
-            
-            grid[x, y] = -1 
-            occupied_sites.append((x, y)) 
-            viable_sites = [(x, y)]
+            grid[min_random_site[0], min_random_site[1]] = -1 
+            occupied_sites.append((min_random_site[0], min_random_site[1])) 
+            viable_sites = [(min_random_site[0], min_random_site[1])]
         else:
             break
     
@@ -79,9 +77,8 @@ def ip_model(grid, random_grid, steps, vegf_threshold):
 
 def main():
     size = 75
-    grid, random_grid = create_grid(size, uniform_grid=False)
-    center = grid.shape[0] // 2 
-    grid[center, center] = -1 
+    grid, random_grid = create_grid(size, uniform_grid=False) 
+    grid[grid.shape[0]//2, grid.shape[0]//2] = -1 
     grid, occupied_sites = ip_model(grid, random_grid, steps=10000, vegf_threshold=0)
     plt.imshow(grid, cmap='hot', interpolation='nearest')
     #plt.colorbar()
