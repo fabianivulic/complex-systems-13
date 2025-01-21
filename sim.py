@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 
 def create_grid(size, uniform_grid=True):
     """
@@ -24,8 +23,13 @@ def create_grid(size, uniform_grid=True):
 
 def get_neighbors(grid, random_grid, x, y):
     """
-    Finds the neighbors of an occupied site and returns their coordinates,
-    along with the random values for those sites.
+    Finds the neighbors of a site and returns their coordinates and their random number.
+    Input:
+    - grid: The environemnt grid
+    - random_grid: The grid with random number assignment
+    - x, y: The x and y coordinates of the site
+    Output:
+    - neighbors: The list of neighbors with their coordinates and random number
     """
     neighbors = []
     neighborhood = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -38,7 +42,15 @@ def get_neighbors(grid, random_grid, x, y):
 
 def ip_model(grid, random_grid, steps, vegf_threshold):
     """
-    Growth according to the IP model, with added randomness in site selection.
+    Sets up the invasion percolation model for angiogenesis according to VEGF concentration.
+    Input:
+    - grid: The grid with VEGF concentration
+    - random_grid: The grid with random number assignment according to the IP model
+    - steps: simulation length
+    - vegf_threshold: The VEGF concentration necessary to occupy a site
+    Output:
+    - grid: The updated grid
+    - occupied_sites: The list of sites with blood vessel
     """
     occupied_sites = [(grid.shape[0] // 2, grid.shape[1] // 2)]  # Starting at the center
     viable_sites = [(grid.shape[0] // 2, grid.shape[1] // 2)]  # Initial growth from the center
@@ -48,9 +60,8 @@ def ip_model(grid, random_grid, steps, vegf_threshold):
         for x, y in viable_sites:
             neighbors = get_neighbors(grid, random_grid, x, y)
             for horizontal_neighbor, vertical_neighbor, random_value in neighbors:
-                if grid[horizontal_neighbor, vertical_neighbor] != -1:
-                    # If there's enough VEGF around, add that to possible new sites for growth
-                    if grid[horizontal_neighbor, vertical_neighbor] > vegf_threshold:
+                #Check if both the site is unoccupied and the VEGF concentration is above the threshold
+                if grid[horizontal_neighbor, vertical_neighbor] != -1 and grid[horizontal_neighbor, vertical_neighbor] > vegf_threshold:
                         new_growth_sites.append((horizontal_neighbor, vertical_neighbor, random_value))
                                 
         if new_growth_sites:
