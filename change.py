@@ -98,8 +98,8 @@ def init_walkers(grid, size, num_walkers):
 
 def main():
     # Parameters
-    size = 75
-    num_walkers = 5
+    size = 400
+    num_walkers = 20
     only_center = False
 
     grid, random_grid = create_grid(size, uniform_grid=True)
@@ -111,7 +111,7 @@ def main():
     else:
         init = init_walkers(grid, size, num_walkers)
 
-    grid, occupied_sites = ip_model(grid, random_grid, init, steps=1000, vegf_threshold=0)
+    grid, occupied_sites = ip_model(grid, random_grid, init, steps=5000, vegf_threshold=0)
     plt.imshow(grid, cmap='hot', interpolation='nearest')
     # plt.colorbar()
     plt.show()
