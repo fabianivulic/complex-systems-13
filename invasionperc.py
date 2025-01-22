@@ -18,7 +18,7 @@ def update_background(background, x, y, decay_amount, neighborhood_radius):
     for dx in range(-neighborhood_radius, neighborhood_radius + 1):
         for dy in range(-neighborhood_radius, neighborhood_radius + 1):
             nx, ny = (x + dx) % size, (y + dy) % size  # Wrap around edges
-            background[nx, ny] = max(0, background[nx, ny] - decay_amount)
+            background[nx, ny] = max(0, background[nx, ny] * decay_amount)
 
 def get_neighbors(x, y, size):
     """Return the valid neighboring positions of a given site with periodic boundary conditions."""
@@ -151,7 +151,7 @@ num_seeds = 10
 steps = 3000
 bias_factor = 0.6
 neighborhood_radius = 20
-decay_amount = 0.01
+decay_amount = 0.99 #this is a decay factor 
 make_gif = True  # Set to False to disable GIF creation
 
 occupied_sites, background_grid = invasion_percolation(size, num_seeds, steps, bias_factor, decay_amount, neighborhood_radius, make_gif, "percolation.gif")
