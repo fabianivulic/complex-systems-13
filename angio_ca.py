@@ -4,7 +4,7 @@ import random
 
 # Adjusted parameters for better accuracy
 GRID_SIZE = 200  # Increase resolution
-N_STEPS = 1  # More steps for complex vascular structures
+N_STEPS = 100  # More steps for complex vascular structures
 D_n = 0.00035  # Endothelial cell diffusion coefficient
 rho_0 = 0.34  # Haptotaxis coefficient
 chi_0 = 0.38  # Chemotaxis coefficient
