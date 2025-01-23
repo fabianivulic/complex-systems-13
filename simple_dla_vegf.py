@@ -9,8 +9,8 @@ class DLASimulation:
     A class to simulate Diffusion-Limited Aggregation (DLA) with neighbor-dependent sticking probability.
     """
     
-    def __init__(self, grid_size=300, num_particles=2000, launch_radius=50, kill_radius=60, 
-                 stick_prob=0.8, neighbor_dependency=0.5, num_seeds=1, save_gif=False):
+    def __init__(self, grid_size=200, num_particles=1000, launch_radius=50, kill_radius=60, 
+                 stick_prob=0.8, neighbor_dependency=0.5, num_seeds=5, save_gif=False):
         """Initializes the DLA simulation with given parameters."""
         self.grid_size = grid_size
         self.num_particles = num_particles
