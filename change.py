@@ -43,7 +43,7 @@ def get_neighbors(grid, random_grid, x, y):
             neighbors.append((neighbor_x, neighbor_y, random_grid[neighbor_x, neighbor_y]))
     return neighbors
 
-def ip_model(grid, random_grid, init, steps, vegf_threshold):
+def ip_model(grid, random_grid, init, branching_prob, steps, vegf_threshold):
     """
     Growth according to the IP model, with added randomness in site selection.
     """
@@ -71,13 +71,29 @@ def ip_model(grid, random_grid, init, steps, vegf_threshold):
                     continue
 
                 # Find the possible site with the lowest random number to be occupied
-                min_random_site = min(elem, key=lambda site: site[2])
-                x, y, _ = min_random_site
-                
-                # Change state of selected neighbor
-                grid[x, y] = -1
-                occupied_sites.append((x, y))
-                viable_sites[i] = (x, y)
+                if random.random() < branching_prob and len(elem) >= 2:
+                    two_min_sites = tuple(sorted(elem, key=lambda site: site[2])[:2])
+                    (x1, y1, _), (x2, y2, _) = two_min_sites
+                    
+                    # Change the state of the selected neighbors
+                    grid[x1, y1] = -1
+                    grid[x2, y2] = -1
+                    
+                    occupied_sites.append((x1, y1))
+                    occupied_sites.append((x2, y2))
+                    
+                    viable_sites[i] = (x1, y1)
+                    viable_sites.append((x2, y2))
+                    # print(f"Branched: {viable_neighbors}")
+                else:
+                    min_random_site = min(elem, key=lambda site: site[2])
+                    x1, y1, _ = min_random_site
+
+                    # Change state of selected neighbor
+                    grid[x1, y1] = -1
+                    occupied_sites.append((x1, y1))
+                    viable_sites[i] = (x1, y1)
+                    # print(f"No branch: {viable_neighbors}")
         else:
             break
     
@@ -98,8 +114,8 @@ def init_walkers(grid, size, num_walkers):
 
 def main():
     # Parameters
-    size = 400
-    num_walkers = 20
+    size = 300
+    num_walkers = 5
     only_center = False
 
     grid, random_grid = create_grid(size, uniform_grid=True)
@@ -111,7 +127,7 @@ def main():
     else:
         init = init_walkers(grid, size, num_walkers)
 
-    grid, occupied_sites = ip_model(grid, random_grid, init, steps=5000, vegf_threshold=0)
+    grid, occupied_sites = ip_model(grid, random_grid, init, branching_prob=0.1, steps=100, vegf_threshold=0)
     plt.imshow(grid, cmap='hot', interpolation='nearest')
     # plt.colorbar()
     plt.show()
