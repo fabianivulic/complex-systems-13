@@ -12,22 +12,49 @@ def initialize_background(size):
     """Initialize a background grid with values set to 1 (good to move)."""
     return np.ones((size, size))
 
-def update_background(background, x, y, decay_amount, neighborhood_radius):
-    """Decrease the background values in the Moore neighborhood around occupied sites with periodic boundary conditions."""
+# This function is not used right now, but could be another implementation of background decrease
+# This might be better since it uses circular decrease (instead of von neumann, which still causes effects of being too "square")
+def update_background_gaussian(background, x, y, decay_amount, neighborhood_radius, wrap_around=True):
+    """Decrease the background values using a Gaussian weight in a circular neighborhood."""
+    size = background.shape[0]
+    sigma = neighborhood_radius / 2  # Controls smoothness
+    for dx in range(-neighborhood_radius, neighborhood_radius + 1):
+        for dy in range(-neighborhood_radius, neighborhood_radius + 1):
+            distance = np.sqrt(dx**2 + dy**2)
+            if distance <= neighborhood_radius:
+                weight = np.exp(-distance**2 / (2 * sigma**2))  # Gaussian function
+                print(weight)
+                nx, ny = x + dx, y + dy
+                if wrap_around:
+                    nx %= size
+                    ny %= size
+                if 0 <= nx < size and 0 <= ny < size:
+                    background[nx, ny] *= (1 - weight * decay_amount)  # Gradual decay
+
+def update_background(background, x, y, decay_amount, neighborhood_radius, wrap_around=True):
+    """Decrease the background values in the Von Neumann neighborhood around occupied sites with optional periodic boundary conditions."""
     size = background.shape[0]
     for dx in range(-neighborhood_radius, neighborhood_radius + 1):
         for dy in range(-neighborhood_radius, neighborhood_radius + 1):
-            nx, ny = (x + dx) % size, (y + dy) % size  # Wrap around edges
-            background[nx, ny] = max(0, background[nx, ny] * decay_amount)
+            if abs(dx) + abs(dy) <= neighborhood_radius:  # Von Neumann neighborhood condition
+                nx, ny = x + dx, y + dy
+                if wrap_around:
+                    nx %= size
+                    ny %= size
+                if 0 <= nx < size and 0 <= ny < size:
+                    background[nx, ny] = max(0, background[nx, ny] * decay_amount)
 
-def get_neighbors(x, y, size):
-    """Return the valid neighboring positions of a given site with periodic boundary conditions."""
-    neighbors = [
-        ((x - 1) % size, y),
-        ((x + 1) % size, y),
-        (x, (y - 1) % size),
-        (x, (y + 1) % size)
-    ]
+def get_neighbors(x, y, size, wrap_around=True):
+    """Return the valid neighboring positions of a given site with optional periodic boundary conditions."""
+    neighbors = []
+    shifts = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    for dx, dy in shifts:
+        nx, ny = x + dx, y + dy
+        if wrap_around:
+            nx %= size
+            ny %= size
+        if 0 <= nx < size and 0 <= ny < size:
+            neighbors.append((nx, ny))
     return neighbors
 
 def calculate_bias(frontier, background, bias_factor):
@@ -39,8 +66,8 @@ def calculate_bias(frontier, background, bias_factor):
     else:
         return frontier[0]  # Returns tuple (value, x, y)
 
-def invasion_percolation(size=400, num_seeds=20, steps=5000, bias_factor=0.9, decay_amount=0.1, neighborhood_radius=3, make_gif=False, gif_name="percolation.gif"):
-    """Perform invasion percolation with multiple seeds and periodic boundary conditions."""
+def invasion_percolation(size=400, num_seeds=20, steps=5000, bias_factor=0.9, decay_amount=0.1, neighborhood_radius=3, make_gif=False, gif_name="percolation.gif", wrap_around=False):
+    """Perform invasion percolation with multiple seeds and optional periodic boundary conditions."""
     lattice = initialize_lattice(size)
     background = initialize_background(size)
     images = [] if make_gif else None
@@ -51,8 +78,8 @@ def invasion_percolation(size=400, num_seeds=20, steps=5000, bias_factor=0.9, de
     for _ in range(num_seeds):
         x, y = random.randint(0, size-1), random.randint(0, size-1)
         occupied.add((x, y))
-        update_background(background, x, y, decay_amount, neighborhood_radius)
-        for nx, ny in get_neighbors(x, y, size):
+        update_background(background, x, y, decay_amount, neighborhood_radius, wrap_around)
+        for nx, ny in get_neighbors(x, y, size, wrap_around):
             frontier.append((lattice[nx, ny], nx, ny))
     
     frontier.sort()
@@ -69,10 +96,10 @@ def invasion_percolation(size=400, num_seeds=20, steps=5000, bias_factor=0.9, de
         frontier = [(v, fx, fy) for v, fx, fy in frontier if (fx, fy) != (x, y)]
         occupied.add((x, y))
 
-        update_background(background, x, y, decay_amount, neighborhood_radius)
+        update_background(background, x, y, decay_amount, neighborhood_radius, wrap_around)
         
-        # Update frontier list now that theres a new occupant in the lattice
-        for nx, ny in get_neighbors(x, y, size):
+        # Update frontier list now that there's a new occupant in the lattice
+        for nx, ny in get_neighbors(x, y, size, wrap_around):
             if (nx, ny) not in occupied:
                 new_value = lattice[nx, ny]
                 frontier.append((new_value, nx, ny))
@@ -118,41 +145,40 @@ def plot_percolation(occupied, background, size):
     plt.show()
 
 
-# Just a function to visually compare some parameter settings quickly
 def plot_percolation_variations(size, num_seeds, steps):
     """Plot percolation structures for different parameter values."""
-    decay_values = [0.001, 0.01]
+    
     bias_values = [0.1, 0.5, 0.9]
+    decay_values = [0.999, 0.99]
     neighborhood_radii = [5, 10, 20]
     make_gif = False
-    fig, axes = plt.subplots(len(decay_values), len(bias_values) * len(neighborhood_radii), figsize=(15, 10))
+    fig, axes = plt.subplots(len(bias_values), len(decay_values) * len(neighborhood_radii), figsize=(15, 15))
     
-    for i, decay_amount in enumerate(decay_values):
-        for j, bias_factor in enumerate(bias_values):
+    for i, bias_factor in enumerate(bias_values):
+        for j, decay_amount in enumerate(decay_values):
             for k, neighborhood_radius in enumerate(neighborhood_radii):
                 print(i,j,k)
                 occupied, _ = invasion_percolation(size, num_seeds, steps, bias_factor, decay_amount, neighborhood_radius, make_gif, "percolation.gif")
                 
-                ax = axes[i, j * len(neighborhood_radii) + k]
+                ax = axes[i % 3, j * len(neighborhood_radii) + k]
                 grid = np.zeros((size, size))
                 for x, y in occupied:
                     grid[x, y] = 1
                 ax.imshow(grid, cmap='gray')
-                ax.set_title(f"D: {decay_amount}, B: {bias_factor}, R: {neighborhood_radius}")
+                ax.set_title(f"b: {bias_factor}, d: {decay_amount}, r: {neighborhood_radius}")
                 ax.axis('off')
     
     plt.tight_layout()
     plt.show()
 
-
 # Run the percolation simulation
 size = 400
 num_seeds = 10
 steps = 3000
-bias_factor = 0.6
-neighborhood_radius = 20
-decay_amount = 0.99 #this is a decay factor 
-make_gif = True  # Set to False to disable GIF creation
+bias_factor = 0.9
+neighborhood_radius = 10
+decay_amount = 0.99 # this is a decay factor 
+make_gif = True 
 
 occupied_sites, background_grid = invasion_percolation(size, num_seeds, steps, bias_factor, decay_amount, neighborhood_radius, make_gif, "percolation.gif")
 plot_percolation(occupied_sites, background_grid, size)
@@ -161,5 +187,5 @@ plot_percolation(occupied_sites, background_grid, size)
 size = 400
 num_seeds = 10
 steps = 3000
-# plot_percolation_variations(size, num_seeds, steps)
+#plot_percolation_variations(size, num_seeds, steps)
 
