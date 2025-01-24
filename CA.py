@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
-import imageio
+import imageio.v2 as imageio
 import os
+from matplotlib.colors import ListedColormap
+
 
 def initialize_lattice(size):
     """Initialize a lattice with random values."""
@@ -102,7 +104,7 @@ def shannon_entropy(grid):
 
     return entropy
 
-def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
+def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=10, wrap_around=False, create_gif = False):
     """Run a cellular automata-based angiogenesis model and compute Shannon entropy."""
     background = initialize_background(size)
     occupied = set()
@@ -111,52 +113,68 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.9
     seeds = [(random.choice([0, size-1]), random.randint(0, size-1)) if random.random() < 0.5 else (random.randint(0, size-1), random.choice([0, size-1])) for _ in range(num_seeds)]
     occupied.update(seeds)
     
-    tumor = create_tumor(size, background, tumor_prob=0.5, tumor_factor=10)
+    tumor = create_tumor(size, background, tumor_prob=0.5, tumor_factor=0.1)
 
     entropies = []  # To store entropy values over time
     
+    grid = np.zeros((size, size))
+
+
     for _ in range(steps):
         new_seeds = []
+
         for x, y in seeds:
             nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
             new_seeds.append((nx, ny))
             occupied.add((nx, ny))
-            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=True)
+            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
         seeds = new_seeds
         
-        # Create a binary grid (1 for occupied, 0 for unoccupied)
-        grid = np.zeros((size, size))
+        # Create a grid (2 for tumor, 1 for occupied, 0 for unoccupied)
         for x, y in tumor:
-            grid[x, y] = 2
+            grid[x, y] = 2  # Tumor cells
+        for x, y in seeds:
+            grid[x, y] = 1  # Initial vessel seeds
         for x, y in occupied:
-            grid[x, y] = 1
+            grid[x, y] = 1  # Growing vessels
+
+        cmap = ListedColormap(["white", "red", "green"])
+        if create_gif:
+            fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+            
+            # Plot the grid
+            axs[0].imshow(grid, cmap=cmap)
+            axs[0].set_title("Angiogenesis-Based CA Growth")
+            
+            # Plot the background
+            axs[1].imshow(background, cmap='viridis')
+            axs[1].set_title("Background VEGF Concentration")
+            fig.colorbar(axs[1].imshow(background, cmap='viridis'), ax=axs[1])
+            
+            # Save the frame
+            plt.savefig(f'frame_{_}.png')
+            plt.close(fig)
         
         # Compute entropy and store
         entropy = shannon_entropy(grid)
         entropies.append(entropy)
-    
-    # Plot the final state
-    plt.figure(figsize=(10, 5))
-    
-    from matplotlib.colors import ListedColormap
-    cmap = ListedColormap(["white", "red", "green"])
+        
+ 
+    if create_gif:
+        with imageio.get_writer('angiogenesis_simulation.gif', mode='I', duration=0.001) as writer:
+            for i in range(steps):
+                image = imageio.imread(f'frame_{i}.png')
+                writer.append_data(image)
+                os.remove(f'frame_{i}.png')
 
-    # Plot the growth
-    plt.subplot(1, 2, 1)
-    plt.imshow(grid, cmap=cmap)
-    plt.title("Angiogenesis-Based CA Growth with Stochasticity")
-    
-    # Plot the entropy over time
-    plt.subplot(1, 2, 2)
-    plt.plot(entropies, label="Shannon Entropy")
-    plt.title("Shannon Entropy Over Time")
+    # Entropy plot
+    plt.plot(entropies)
     plt.xlabel("Time Step")
     plt.ylabel("Entropy")
-    plt.legend()
-    plt.tight_layout()
+    plt.title("Shannon Entropy Over Time")
     plt.show()
 
     return entropies[-1]
 
-last_entropy = simulate_CA_with_entropy()
+last_entropy = simulate_CA_with_entropy(create_gif=True)
 print("Entropy in last time step: ", last_entropy)
