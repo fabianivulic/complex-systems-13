@@ -26,7 +26,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     tumor = []
     center = size // 2
     empty_radius = size / 10
-    tumor_radius = size / 8
+    tumor_radius = size / 6
 
     for x in range(size):
         for y in range(size):
@@ -73,49 +73,33 @@ def move_seed(x, y, background, size, wrap_around, bias_factor):
     move_probabilities.sort(reverse=True)  # Favor higher VEGF concentration with stochasticity
     return move_probabilities[0][1], move_probabilities[0][2]
 
-def simulate_CA(size=200, num_seeds=15, steps=350, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=3, wrap_around=False):
-    """Run a cellular automata-based angiogenesis model."""
-    background = initialize_background(size)
-    occupied = set()
-    
-    # Initialize seeds at random positions
-    seeds = [(random.choice([0, size-1]), random.randint(0, size-1)) if random.random() < 0.5 else (random.randint(0, size-1), random.choice([0, size-1])) for _ in range(num_seeds)]
-    
-    occupied.update(seeds)
-    
-    for _ in range(steps):
-        new_seeds = []
-        for x, y in seeds:
-            nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
-            new_seeds.append((nx, ny))
-            occupied.add((nx, ny))
-            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=True)
-        seeds = new_seeds
-    
-    # Plot the final state
-    grid = np.zeros((size, size))
-    for x, y in occupied:
-        grid[x, y] = 1
-    plt.imshow(grid, cmap='gray')
-    plt.title("Angiogenesis-Based CA Growth with Stochasticity")
-    plt.show()
-    
-# simulate_CA()
-
 def shannon_entropy(grid):
-    """Compute Shannon entropy for a binary grid (occupied/unoccupied)."""
-    # Flatten the grid and calculate probabilities
-    flattened = grid.flatten()
-    total_cells = len(flattened)
-    p_occupied = np.sum(flattened) / total_cells  # Proportion of occupied cells
-    p_unoccupied = 1 - p_occupied  # Proportion of unoccupied cells
+    """Compute Shannon entropy for a grid considering 3 states and limiting the region to tumor radius."""    
+    size = grid.shape[0]
+    center = size // 2
+    empty_radius = size / 10
+    tumor_radius = size / 6
 
-    # Shannon entropy formula for binary grid
-    if p_occupied > 0 and p_unoccupied > 0:
-        entropy = - (p_occupied * np.log2(p_occupied) + p_unoccupied * np.log2(p_unoccupied))
-    else:
-        entropy = 0  # If all cells are either occupied or unoccupied
+    flattened = []
+
+    for x in range(size):
+        for y in range(size):
+            distance = np.sqrt((x - center)**2 + (y - center)**2)
+            if tumor_radius > distance > empty_radius :
+                flattened.append(grid[x, y])
     
+    # Compute probability of each state
+    flattened = np.array(flattened)
+    total_cells = len(flattened)
+    if total_cells == 0:
+        return 0
+
+    unique_states, counts = np.unique(flattened, return_counts=True)
+    probabilities = counts/total_cells
+
+    # Compute Shannon entropy
+    entropy = - np.sum(probabilities * np.log2(probabilities))
+
     return entropy
 
 def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
