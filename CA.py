@@ -26,7 +26,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     tumor = []
     center = size // 2
     empty_radius = size / 10
-    tumor_radius = size / 8
+    tumor_radius = size / 6
 
     for x in range(size):
         for y in range(size):
