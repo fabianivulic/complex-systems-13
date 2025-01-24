@@ -20,7 +20,7 @@ def initialize_background(size):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
             if distance > empty_radius:
-                background[x, y] = np.exp(-distance**2 / (2 * sigma**2))
+                background[x, y] = 0.9*np.exp(-distance**2 / (2 * sigma**2))
     return background
 
 def create_tumor(size, background, tumor_prob, tumor_factor):
@@ -104,7 +104,7 @@ def shannon_entropy(grid):
 
     return entropy
 
-def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=10, wrap_around=False, create_gif = False):
+def simulate_CA_with_entropy(size=200, num_seeds=25, steps=3, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=5, wrap_around=False, create_gif = False, create_grid = True):
     """Run a cellular automata-based angiogenesis model and compute Shannon entropy."""
     background = initialize_background(size)
     occupied = set()
@@ -119,7 +119,6 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.9
     
     grid = np.zeros((size, size))
 
-
     for _ in range(steps):
         new_seeds = []
 
@@ -130,35 +129,37 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.9
             update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
         seeds = new_seeds
         
-        # Create a grid (2 for tumor, 1 for occupied, 0 for unoccupied)
-        for x, y in tumor:
-            grid[x, y] = 2  # Tumor cells
-        for x, y in seeds:
-            grid[x, y] = 1  # Initial vessel seeds
-        for x, y in occupied:
-            grid[x, y] = 1  # Growing vessels
+        if create_grid:
+            # Create a grid (2 for tumor, 1 for occupied, 0 for unoccupied)
+            for x, y in tumor:
+                grid[x, y] = 2  # Tumor cells
+            for x, y in seeds:
+                grid[x, y] = 1  # Initial vessel seeds
+            for x, y in occupied:
+                grid[x, y] = 1  # Growing vessels
 
-        cmap = ListedColormap(["white", "red", "green"])
-        if create_gif:
-            fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+            grid = grid.astype(int)
+            cmap = ListedColormap(["white", "red", "green"])
+            if create_gif:
+                fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+                
+                # Plot the grid
+                axs[0].imshow(grid, cmap=cmap, vmin=0, vmax=2)
+                axs[0].set_title("Angiogenesis-Based CA Growth")
+                
+                # Plot the background
+                axs[1].imshow(background, cmap='viridis')
+                axs[1].set_title("Background VEGF Concentration")
+                fig.colorbar(axs[1].imshow(background, cmap='viridis'), ax=axs[1])
+                
+                # Save the frame
+                plt.savefig(f'frame_{_}.png')
+                plt.close(fig)
             
-            # Plot the grid
-            axs[0].imshow(grid, cmap=cmap)
-            axs[0].set_title("Angiogenesis-Based CA Growth")
+            # Compute entropy and store
+            entropy = shannon_entropy(grid)
+            entropies.append(entropy)
             
-            # Plot the background
-            axs[1].imshow(background, cmap='viridis')
-            axs[1].set_title("Background VEGF Concentration")
-            fig.colorbar(axs[1].imshow(background, cmap='viridis'), ax=axs[1])
-            
-            # Save the frame
-            plt.savefig(f'frame_{_}.png')
-            plt.close(fig)
-        
-        # Compute entropy and store
-        entropy = shannon_entropy(grid)
-        entropies.append(entropy)
-        
  
     if create_gif:
         with imageio.get_writer('angiogenesis_simulation.gif', mode='I', duration=0.001) as writer:
