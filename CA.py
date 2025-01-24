@@ -84,5 +84,75 @@ def simulate_CA(size=200, num_seeds=15, steps=350, bias_factor=0.92, decay_facto
     plt.title("Angiogenesis-Based CA Growth with Stochasticity")
     plt.show()
     
-simulate_CA()
+# simulate_CA()
 
+def shannon_entropy(grid):
+    """Compute Shannon entropy for a binary grid (occupied/unoccupied)."""
+    # Flatten the grid and calculate probabilities
+    flattened = grid.flatten()
+    total_cells = len(flattened)
+    p_occupied = np.sum(flattened) / total_cells  # Proportion of occupied cells
+    p_unoccupied = 1 - p_occupied  # Proportion of unoccupied cells
+
+    # Shannon entropy formula for binary grid
+    if p_occupied > 0 and p_unoccupied > 0:
+        entropy = - (p_occupied * np.log2(p_occupied) + p_unoccupied * np.log2(p_unoccupied))
+    else:
+        entropy = 0  # If all cells are either occupied or unoccupied
+    
+    return entropy
+
+def simulate_CA_with_entropy(size=200, num_seeds=10, steps=1000, bias_factor=0.92, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
+    """Run a cellular automata-based angiogenesis model and compute Shannon entropy."""
+    background = initialize_background(size)
+    occupied = set()
+    
+    # Initialize seeds at random positions
+    seeds = [(random.choice([0, size-1]), random.randint(0, size-1)) if random.random() < 0.5 else (random.randint(0, size-1), random.choice([0, size-1])) for _ in range(num_seeds)]
+    occupied.update(seeds)
+    
+    entropies = []  # To store entropy values over time
+    
+    for _ in range(steps):
+        new_seeds = []
+        for x, y in seeds:
+            nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
+            new_seeds.append((nx, ny))
+            occupied.add((nx, ny))
+            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=True)
+        seeds = new_seeds
+        
+        # Create a binary grid (1 for occupied, 0 for unoccupied)
+        grid = np.zeros((size, size))
+        for x, y in occupied:
+            grid[x, y] = 1
+        
+        # Compute entropy and store
+        entropy = shannon_entropy(grid)
+        entropies.append(entropy)
+    
+    # Plot the final state
+    plt.figure(figsize=(10, 5))
+    
+    from matplotlib.colors import ListedColormap
+    cmap = ListedColormap(["white", "red"])
+
+    # Plot the growth
+    plt.subplot(1, 2, 1)
+    plt.imshow(grid, cmap=cmap)
+    plt.title("Angiogenesis-Based CA Growth with Stochasticity")
+    
+    # Plot the entropy over time
+    plt.subplot(1, 2, 2)
+    plt.plot(entropies, label="Shannon Entropy")
+    plt.title("Shannon Entropy Over Time")
+    plt.xlabel("Time Step")
+    plt.ylabel("Entropy")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    return entropies[-1]
+
+last_entropy = simulate_CA_with_entropy()
+print("Entropy in last time step: ", last_entropy)
