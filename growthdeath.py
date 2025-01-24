@@ -4,6 +4,25 @@ import random
 import imageio
 import os
 
+# Define the function to generate initial seeds
+def initialize_seeds(size, seeds_per_edge=5):
+    """Generates a list of seeds evenly distributed along the four edges."""
+    seeds = []
+    
+    # Left edge (x=0, y varies)
+    seeds.extend([(0, random.randint(0, size - 1)) for _ in range(seeds_per_edge)])
+    
+    # Right edge (x=size-1, y varies)
+    seeds.extend([(size - 1, random.randint(0, size - 1)) for _ in range(seeds_per_edge)])
+    
+    # Top edge (y=size-1, x varies)
+    seeds.extend([(random.randint(0, size - 1), size - 1) for _ in range(seeds_per_edge)])
+    
+    # Bottom edge (y=0, x varies)
+    seeds.extend([(random.randint(0, size - 1), 0) for _ in range(seeds_per_edge)])
+    
+    return seeds
+
 def initialize_lattice(size):
     """Initialize a lattice with random values."""
     return np.random.rand(size, size)
@@ -26,7 +45,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     tumor = set()
     center = size // 2
     empty_radius = size / 10
-    tumor_radius = size / 6
+    tumor_radius = size / 5
 
     for x in range(size):
         for y in range(size):
@@ -52,7 +71,7 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
     """Determines growth/death of tumor cells based on how many blood vessels cells surround it."""
     center = size // 2
     empty_radius = size / 10
-    tumor_radius = size / 6
+    tumor_radius = size / 5
     total_neighborhood = 2 * radius * (radius + 1)
 
     for x in range(size):
@@ -60,19 +79,18 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
             if tumor_radius > distance > empty_radius and (x, y) in tumor:
                 blood = check_blood(x, y, occupied, radius)
-                blood_bias = 1 / (1 + np.exp(-2 * (len(blood)-2)))
+                blood_bias = 1 / (1 + np.exp(-1 * (len(blood)-1)))
                 death = p * (1 - blood_bias)
                 growth = p * (blood_bias)
                 if random.random() <= growth:
-                    print("Growth")
                     neighbors = get_neighbors(x, y, size, wrap_around=False)
                     for x, y in neighbors:
                         if (x, y) not in occupied and (x, y) not in tumor:
-                            occupied.add((x, y))
+                            tumor.add((x, y))
                             background[x, y] += tumor_factor
                 elif random.random() <= death:
-                    print("Death")
                     tumor.remove((x, y))
+                    background[x, y] -= tumor_factor
                 else:
                     continue
 
@@ -141,7 +159,7 @@ def shannon_entropy(grid):
 
     return entropy
 
-def simulate_CA_with_entropy(size=200, num_seeds=10, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
+def simulate_CA_with_entropy(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
     """Run a cellular automata-based angiogenesis model and compute Shannon entropy."""
     background = initialize_background(size)
     occupied = set()
@@ -149,7 +167,7 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=500, bias_factor=0.93
     tumor_prob = 0.5
     
     # Initialize seeds at random positions
-    seeds = [(random.choice([0, size-1]), random.randint(0, size-1)) if random.random() < 0.5 else (random.randint(0, size-1), random.choice([0, size-1])) for _ in range(num_seeds)]
+    seeds = initialize_seeds(size)
     occupied.update(seeds)
     for x, y in seeds:
         update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
@@ -159,7 +177,6 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=500, bias_factor=0.93
     entropies = []  # To store entropy values over time
     
     for i in range(steps):
-        print(f"Step {i}")
         new_seeds = []
         for x, y in seeds:
             nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
@@ -176,7 +193,7 @@ def simulate_CA_with_entropy(size=200, num_seeds=10, steps=500, bias_factor=0.93
             grid[x, y] = 1
 
         if i > 400:
-            growth_death(background, size, tumor, tumor_factor, 2, occupied, p=0.05)
+            growth_death(background, size, tumor, tumor_factor, 2, occupied, p=0.01)
             
         # Compute entropy and store
         entropy = shannon_entropy(grid)
