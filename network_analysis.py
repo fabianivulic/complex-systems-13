@@ -1,3 +1,9 @@
+"""
+This file contains the code for the network analysis of the simulated images.  
+The network analysis measures that are calculated are the average degree, average degree betweenness, 
+average page rank, and average clustering coefficient. 
+"""
+
 import numpy as np
 import pandas as pd
 from skimage import io, color, filters, morphology
