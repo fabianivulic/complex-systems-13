@@ -49,6 +49,7 @@ def network_analysis(image, show_skeleton=True, show_graph=True, print_results=T
     average_betweenness = np.mean(list(nx.betweenness_centrality(graph).values()))
     average_page_rank = np.mean(list(nx.pagerank(graph).values()))
     average_clustering_coefficient = nx.average_clustering(graph)
+    degree_distribution = np.array(list(dict(graph.degree()).values()))
     
     if print_results:
         print(f"Average degree: {average_degree}")
@@ -56,44 +57,113 @@ def network_analysis(image, show_skeleton=True, show_graph=True, print_results=T
         print(f"Average page rank: {average_page_rank}")
         print(f"Average clustering coefficient: {average_clustering_coefficient}")
     
-    return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient
+    return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
 def run_experiments():
-    size = 200
-    num_seeds = 20
-    steps = 500
-    bias_factor = 0.93
-    decay_factor = 0.99
-    neighborhood_radius = 10
-    wrap_around = False
-    num_simulations = 3
-
-    results = []
-    for i in range(num_simulations):
-        print(f'Running simulation {i+1}...')
-        grid, final_entropy = simulate_CA(
-            size=size, 
-            num_seeds=num_seeds, 
-            steps=steps, 
-            bias_factor=bias_factor, 
-            decay_factor=decay_factor, 
-            neighborhood_radius=neighborhood_radius, 
-            wrap_around=wrap_around)
+    experiment_type = input('Enter the experiment type (bias_factor, decay_factor, constant): ')
+    num_runs = int(input('Enter the number of runs for each experimental value: '))
+    
+    if experiment_type == 'bias_factor':
+        bias_factors = np.linspace(0, 1.0, 5)
+        decay_factor = 0.99
+        results = []
+        for bias_factor in bias_factors:
+            for run in range(num_runs):
+                print(f'Running simulation for bias factor {bias_factor}, run {run + 1}...')
+                grid, min_entropy = simulate_CA(
+                    size=200, 
+                    num_seeds=20, 
+                    steps=500, 
+                    bias_factor=bias_factor, 
+                    decay_factor=decay_factor, 
+                    neighborhood_radius=10, 
+                    wrap_around=False,
+                    plot=False)
+                
+                vessel_image(grid, 'final_grid.png')
+                image = io.imread('images/final_grid.png')
+                average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+                results.append({
+                    'bias_factor': bias_factor,
+                    'run': run + 1,
+                    'min_entropy': min_entropy,
+                    'average_degree': average_degree,
+                    'average_betweenness': average_betweenness,
+                    'average_page_rank': average_page_rank,
+                    'average_clustering_coefficient': average_cc
+                })
+                print()
         
-        vessel_image(grid, 'final_grid.png')
-        image = io.imread('images/final_grid.png')
-        average_degree, average_betweenness, average_page_rank, average_cc = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
-        results.append({
-            'final_entropy': final_entropy,
-            'average_degree': average_degree,
-            'average_betweenness': average_betweenness,
-            'average_page_rank': average_page_rank,
-            'average_clustering_coefficient': average_cc
-        })
-        print()
-
-    df = pd.DataFrame(results)
-    print(df)
-    df.to_csv('data/results.csv', index=False)
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+    
+    elif experiment_type == 'decay_factor':
+        bias_factor = 0.9
+        decay_factors = np.linspace(0.8, 1.0, 5)
+        results = []
+        for decay_factor in decay_factors:
+            for run in range(num_runs):
+                print(f'Running simulation for decay factor {decay_factor}, run {run + 1}...')
+                grid, min_entropy = simulate_CA(
+                    size=200, 
+                    num_seeds=20, 
+                    steps=500, 
+                    bias_factor=bias_factor, 
+                    decay_factor=decay_factor, 
+                    neighborhood_radius=10, 
+                    wrap_around=False, 
+                    plot=False)
+                
+                vessel_image(grid, 'final_grid.png')
+                image = io.imread('images/final_grid.png')
+                average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+                results.append({
+                    'decay_factor': decay_factor,
+                    'run': run + 1,
+                    'min_entropy': min_entropy,
+                    'average_degree': average_degree,
+                    'average_betweenness': average_betweenness,
+                    'average_page_rank': average_page_rank,
+                    'average_clustering_coefficient': average_cc
+                })
+                print()
+        
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+    
+    elif experiment_type == 'constant':
+        bias_factor = 0.9
+        decay_factor = 0.99
+        results = []
+        for run in range(num_runs):
+            print(f'Running simulation for constant factors, run {run + 1}...')
+            grid, min_entropy = simulate_CA(
+                size=200, 
+                num_seeds=20, 
+                steps=500, 
+                bias_factor=bias_factor, 
+                decay_factor=decay_factor, 
+                neighborhood_radius=10, 
+                wrap_around=False,
+                plot=False)
+            
+            vessel_image(grid, 'final_grid.png')
+            image = io.imread('images/final_grid.png')
+            average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+            results.append({
+                'run': run + 1,
+                'min_entropy': min_entropy,
+                'average_degree': average_degree,
+                'average_betweenness': average_betweenness,
+                'average_page_rank': average_page_rank,
+                'average_clustering_coefficient': average_cc
+            })
+            print()
+        
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+        
+    else:
+        print('Invalid experiment type. Please enter either "bias_factor" or "decay_factor".')
 
 run_experiments()

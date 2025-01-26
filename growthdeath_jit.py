@@ -243,7 +243,7 @@ def shannon_entropy(grid):
     entropy = -np.sum(probabilities * np.log2(probabilities))
     return entropy
 
-def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, wrap_around=False):
+def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, wrap_around=False, plot=True):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -258,66 +258,62 @@ def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_facto
     - The Shannon entropy value in the last time step
     """
     background = initialize_background(size)
-    occupied = np.zeros((size, size), dtype=np.bool_)
+    vessel_grid = np.zeros((size, size), dtype=np.bool_) # Need to be separately delineated 
+    tumor_grid = np.zeros((size, size), dtype=np.bool_)  # so they can occupy the same space
     tumor_factor = 0.1
     tumor_prob = 0.5
     
     # Initialize seeds for blood vessels at random positions
     seeds = initialize_seeds(size)
     for x, y in seeds:
-        occupied[x, y] = True
+        vessel_grid[x, y] = True
         update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
-    tumor = create_tumor(size, background, tumor_prob, tumor_factor)
+    
+    # Initialize tumor cells
+    tumor_grid = create_tumor(size, background, tumor_prob, tumor_factor)
     entropies = []
+    
     for i in range(steps):
         new_seeds = []
         for x, y in seeds:
             nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
             new_seeds.append((nx, ny))
-            occupied[nx, ny] = True
+            vessel_grid[nx, ny] = True 
             update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
         seeds = new_seeds
         
-        # State 2 represents tumor cells, state 1 represents blood vessels
-        grid = np.zeros((size, size))
-        for x in range(size):
-            for y in range(size):
-                if tumor[x, y]:
-                    grid[x, y] = 2
-                elif occupied[x, y]:
-                    grid[x, y] = 1
-                    
         # Introduce growth and death of tumor cells after a certain time step
         if i > 400:
-            growth_death(background, size, tumor, tumor_factor, 2, occupied, p=0.01)
-            
-        # Currently, we are only calculating the entropy for the tumor region
-        tumor_grid = np.zeros((size, size))
-        for x in range(size):
-            for y in range(size):
-                if tumor[x, y]:
-                    tumor_grid[x, y] = 2
-        entropy = shannon_entropy(tumor_grid)
+            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p=0.01)
+        
+        # Combine grids for visualization
+        grid = np.zeros((size, size))
+        grid[vessel_grid] = 1  # Blood vessels
+        grid[tumor_grid] = 2   # Tumor cells
+        
+        # Calculate entropy for tumor cells
+        entropy = shannon_entropy(tumor_grid.astype(np.float64))
         entropies.append(entropy)
     
     # Plotting the visualization and tumor entropy over time
-    plt.figure(figsize=(10, 5))
-    cmap = ListedColormap(["white", "red", "green"])
-    print(f"Number of blood vessel pixels: {np.sum(occupied)}")
-    print(f"Number of tumor pixels: {np.sum(tumor)}")
-    plt.subplot(1, 2, 1)
-    plt.imshow(grid, cmap=cmap)
-    plt.title("Angiogenesis-Based CA Growth with Stochasticity")
-    plt.subplot(1, 2, 2)
-    plt.plot(entropies, label="Shannon Entropy")
-    plt.title("Tumor Shannon Entropy Over Time")
-    plt.xlabel("Time Step")
-    plt.ylabel("Entropy")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    if plot:
+        plt.figure(figsize=(10, 5))
+        cmap = ListedColormap(["white", "red", "green"])
+        print(f"Number of blood vessel pixels: {np.sum(vessel_grid)}")
+        print(f"Number of tumor pixels: {np.sum(tumor_grid)}")
+        plt.subplot(1, 2, 1)
+        plt.imshow(grid, cmap=cmap)
+        plt.title("Angiogenesis-Based CA Growth with Stochasticity")
+        plt.subplot(1, 2, 2)
+        plt.plot(entropies, label="Shannon Entropy")
+        plt.title("Tumor Shannon Entropy Over Time")
+        plt.xlabel("Time Step")
+        plt.ylabel("Entropy")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
     
-    return grid, entropies[-1]
+    return vessel_grid, min(entropies)
 
 def vessel_image(grid, filename):
     """
@@ -350,7 +346,7 @@ def main():
     neighborhood_radius = 10
     wrap_around = False
 
-    grid, final_entropy = simulate_CA(
+    grid, min_entropy = simulate_CA(
         size=size,
         num_seeds=num_seeds,
         steps=steps,
@@ -358,6 +354,7 @@ def main():
         decay_factor=decay_factor,
         neighborhood_radius=neighborhood_radius,
         wrap_around=wrap_around,
+        plot=True
     )
     vessel_image(grid, 'final_grid.png')
     
