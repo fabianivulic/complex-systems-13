@@ -51,11 +51,13 @@ def initialize_background(size):
     center = size // 2
     sigma = size / 3
     empty_radius = size / 10
+
     for x in range(size):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
             if distance > empty_radius:
                 background[x, y] = 0.9 * np.exp(-distance**2 / (2 * sigma**2))
+
     return background
 
 @njit
@@ -74,12 +76,14 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     center = size // 2
     empty_radius = size / 10
     tumor_radius = size / 5
+
     for x in range(size):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
             if tumor_radius > distance > empty_radius and random.random() > tumor_prob:
                 tumor[x, y] = True
                 background[x, y] += tumor_factor
+
     return tumor
 
 @njit
@@ -93,11 +97,13 @@ def check_blood(x, y, occupied, radius):
     - A list of coordinates of blood vessels surrounding the tumor cell
     """
     blood = []
+
     for dx in range(-radius, radius + 1):
         for dy in range(-radius, radius + 1):
             if abs(dx) + abs(dy) <= radius and occupied[x, y]:
                 nx, ny = x + dx, y + dy
                 blood.append((nx, ny))
+
     return blood
 
 @njit
@@ -117,24 +123,30 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
     center = size // 2
     empty_radius = size / 10
     tumor_radius = size / 5
-    total_neighborhood = 2 * radius * (radius + 1)
+
+    # Extra line for calculating Von Neumann neighbor count if necessary
+    # total_neighborhood = 2 * radius * (radius + 1)
+
     for x in range(size):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
-            if tumor_radius > distance > empty_radius and tumor[x, y]:
-                blood = check_blood(x, y, occupied, radius)
-                blood_bias = 1 / (1 + np.exp(-1 * (len(blood)-1)))
-                death = p * (1 - blood_bias)
-                growth = p * (blood_bias)
-                if random.random() <= growth:
-                    neighbors = get_neighbors(x, y, size, wrap_around=False)
-                    for nx, ny in neighbors:
-                        if not occupied[nx, ny] and not tumor[nx, ny]:
-                            tumor[nx, ny] = True
-                            background[nx, ny] += tumor_factor
-                elif random.random() <= death:
-                    tumor[x, y] = False
-                    background[x, y] -= tumor_factor
+
+            if not(tumor_radius > distance > empty_radius) or not tumor[x, y]:
+                continue
+
+            blood_count = len(check_blood(x, y, occupied, radius))
+            blood_bias = 1 / (1 + np.exp(-1 * (blood_count-1)))
+            growth, death = p * (blood_bias), p * (1-blood_bias)
+            
+            if random.random() <= growth:
+                neighbors = get_neighbors(x, y, size, wrap_around=False)
+                for nx, ny in neighbors:
+                    if not occupied[nx, ny] and not tumor[nx, ny]:
+                        tumor[nx, ny] = True
+                        background[nx, ny] += tumor_factor
+            elif random.random() <= death:
+                tumor[x, y] = False
+                background[x, y] -= tumor_factor
 
 @njit
 def get_neighbors(x, y, size, wrap_around=True):
@@ -149,6 +161,7 @@ def get_neighbors(x, y, size, wrap_around=True):
     """
     neighbors = []
     shifts = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
     for dx, dy in shifts:
         nx, ny = x + dx, y + dy
         if wrap_around:
@@ -156,10 +169,11 @@ def get_neighbors(x, y, size, wrap_around=True):
             ny %= size
         if 0 <= nx < size and 0 <= ny < size:
             neighbors.append((nx, ny))
+
     return neighbors
 
 @njit
-def update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=True):
+def update_background(background, x, y, decay_factor, radius, wrap_around=True):
     """
     Decrease the background values using a Gaussian weight in a circular neighborhood 
     with maximal decay at the center.
@@ -173,18 +187,24 @@ def update_background(background, x, y, decay_factor, neighborhood_radius, wrap_
     No output, but updates the background grid.
     """
     size = background.shape[0]
-    sigma = neighborhood_radius / 2
-    for dx in range(-neighborhood_radius, neighborhood_radius + 1):
-        for dy in range(-neighborhood_radius, neighborhood_radius + 1):
+    sigma = radius / 2
+
+    for dx in range(-radius, radius + 1):
+        for dy in range(-radius, radius + 1):
             distance = np.sqrt(dx**2 + dy**2)
-            if distance <= neighborhood_radius:
-                weight = np.exp(-distance**2 / (2 * sigma**2))
-                nx, ny = x + dx, y + dy
-                if wrap_around:
-                    nx %= size
-                    ny %= size
-                if 0 <= nx < size and 0 <= ny < size:
-                    background[nx, ny] = max(0, background[nx, ny] * (1 - weight * (1 - decay_factor)))
+
+            if distance > radius:
+                continue
+
+            weight = np.exp(-distance**2 / (2 * sigma**2))
+            nx, ny = x + dx, y + dy
+
+            if wrap_around:
+                nx %= size
+                ny %= size
+
+            if 0 <= nx < size and 0 <= ny < size:
+                background[nx, ny] = max(0, background[nx, ny] * (1 - weight * (1 - decay_factor)))
 
 @njit
 def move_seed(x, y, background, size, wrap_around, bias_factor):
@@ -202,6 +222,7 @@ def move_seed(x, y, background, size, wrap_around, bias_factor):
     neighbors = get_neighbors(x, y, size, wrap_around)
     move_probabilities = [(random.random() * (1 - bias_factor) + background[nx, ny] * bias_factor, nx, ny) for nx, ny in neighbors]
     move_probabilities.sort(reverse=True) # Favor higher VEGF concentration with stochasticity
+
     return move_probabilities[0][1], move_probabilities[0][2]
 
 @njit
