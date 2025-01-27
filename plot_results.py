@@ -92,28 +92,28 @@ def plot_results():
             print()
             
     elif experiment_type == 'scatter':
-        #new_experiment_type = input('Enter the experiment type (bias_factor, decay_factor, tumor_prob): ')
-        #df = pd.read_csv(f"data/{new_experiment_type}_results.csv")
-        combined_df = pd.concat(
-            [pd.read_csv(f"data/{factor}_results.csv").assign(factor=factor) for factor in ['bias_factor', 'decay_factor', 'tumor_prob']],
-            ignore_index=True
-        )
+        new_experiment_type = input('Enter the experiment type (bias_factor, decay_factor, tumor_prob): ')
+        df = pd.read_csv(f"data/{new_experiment_type}_results.csv")
+        # combined_df = pd.concat(
+        #     [pd.read_csv(f"data/{factor}_results.csv").assign(factor=factor) for factor in ['bias_factor', 'decay_factor', 'tumor_prob']],
+        #     ignore_index=True
+        # )
         _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
         axes = axes.flatten()
         for i, metric in enumerate(metrics):
             ax = axes[i]
             scatter = ax.scatter(
-                combined_df[metric],  # x-axis
-                combined_df["min_entropy"],  # y-axis
-                #c=combined_df[new_experiment_type],  # color by factor
+                df[metric],  # x-axis
+                df["min_entropy"],  # y-axis
+                c=df[new_experiment_type],  # color by factor
                 label=metric.replace('_', ' ').title(),
                 s=20
             )
             ax.set_xlabel(metric.replace('_', ' ').title())
             ax.set_ylabel("Min Tumor Entropy")
             ax.grid(False)
-        # handles, labels = scatter.legend_elements(prop="colors", alpha=0.6)
-        # axes[1].legend(handles, labels, title=f"{new_experiment_type}", bbox_to_anchor=(1.02, 1.025), loc='upper left')
+        handles, labels = scatter.legend_elements(prop="colors", alpha=0.6)
+        axes[1].legend(handles, labels, title=f"{new_experiment_type}", bbox_to_anchor=(1.02, 1.025), loc='upper left')
         plt.suptitle("Min Tumor Entropy vs. Network Metrics")
         plt.tight_layout()
         plt.show()
