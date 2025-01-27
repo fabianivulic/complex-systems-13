@@ -183,7 +183,7 @@ def run_experiments():
             print(f'Running simulation for constant factors, run {run + 1}...')
             vessel_grid, tumor_grid, min_entropy = simulate_CA(
                 size=200, 
-                num_seeds=20, 
+                seeds_per_edge=5, 
                 steps=500, 
                 bias_factor=bias_factor, 
                 decay_factor=decay_factor, 
