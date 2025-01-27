@@ -267,7 +267,7 @@ def shannon_entropy(grid):
     entropy = -np.sum(probabilities * np.log2(probabilities))
     return entropy
 
-def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -287,7 +287,7 @@ def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_facto
     tumor_factor = 0.1
     
     # Initialize seeds for blood vessels at random positions
-    seeds = initialize_seeds(size)
+    seeds = initialize_seeds(size, seeds_per_edge)
     for x, y in seeds:
         vessel_grid[x, y] = True
         update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
@@ -363,7 +363,7 @@ def main():
     Main function to execute the simulation.
     """
     size = 200
-    num_seeds = 20
+    seeds_per_edge = 5
     steps = 500
     bias_factor = 0.93
     decay_factor = 0.99
@@ -374,7 +374,7 @@ def main():
 
     vessel_grid, _, _ = simulate_CA(
         size=size,
-        num_seeds=num_seeds,
+        seeds_per_edge=seeds_per_edge,
         steps=steps,
         bias_factor=bias_factor,
         decay_factor=decay_factor,
