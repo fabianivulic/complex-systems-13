@@ -264,7 +264,7 @@ def shannon_entropy(grid):
     entropy = -np.sum(probabilities * np.log2(probabilities))
     return entropy
 
-def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, wrap_around=False, plot=True):
+def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -282,7 +282,6 @@ def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_facto
     vessel_grid = np.zeros((size, size), dtype=np.bool_) # Need to be separately delineated 
     tumor_grid = np.zeros((size, size), dtype=np.bool_)  # so they can occupy the same space
     tumor_factor = 0.1
-    tumor_prob = 0.5
     
     # Initialize seeds for blood vessels at random positions
     seeds = initialize_seeds(size)
@@ -365,6 +364,7 @@ def main():
     bias_factor = 0.93
     decay_factor = 0.99
     neighborhood_radius = 10
+    tumor_prob = 0.5
     wrap_around = False
 
     grid, min_entropy = simulate_CA(
@@ -374,6 +374,7 @@ def main():
         bias_factor=bias_factor,
         decay_factor=decay_factor,
         neighborhood_radius=neighborhood_radius,
+        tumor_prob=tumor_prob,
         wrap_around=wrap_around,
         plot=True
     )
