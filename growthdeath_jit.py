@@ -240,32 +240,32 @@ def shannon_entropy(grid):
     - The Shannon entropy value
     """    
     size = grid.shape[0]
-    center = size // 2
-    empty_radius = size / 10
-    tumor_radius = size / 6
+    tumor_cells = np.sum(grid == 2)
+    total_cells = size * size
+    tumor_density = tumor_cells / total_cells
+    
+    #flattened = []
+    #for x in range(size):
+    #    for y in range(size):
+    #        flattened.append(grid[x, y])
 
-    flattened = []
-    for x in range(size):
-        for y in range(size):
-            flattened.append(grid[x, y])
+    #flattened = np.array(flattened)
+    #total_cells = len(flattened)
+    #if total_cells == 0:
+    #    return 0
 
-    flattened = np.array(flattened)
-    total_cells = len(flattened)
-    if total_cells == 0:
-        return 0
+    #unique_values = []
+    #counts = []
+    #for value in flattened:
+    #    if value not in unique_values:
+    #        unique_values.append(value)
+    #        counts.append(1)
+    #    else:
+    #        counts[unique_values.index(value)] += 1
 
-    unique_values = []
-    counts = []
-    for value in flattened:
-        if value not in unique_values:
-            unique_values.append(value)
-            counts.append(1)
-        else:
-            counts[unique_values.index(value)] += 1
-
-    probabilities = np.array(counts) / total_cells
-    entropy = -np.sum(probabilities * np.log2(probabilities))
-    return entropy
+    #probabilities = np.array(counts) / total_cells
+    # entropy = -np.sum(probabilities * np.log2(probabilities))
+    return tumor_density
 
 def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
     """
