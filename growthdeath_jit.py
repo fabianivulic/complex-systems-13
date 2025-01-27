@@ -231,7 +231,7 @@ def move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid):
     return move_probabilities[0][1], move_probabilities[0][2]
 
 @njit
-def shannon_entropy(grid):
+def shannon_entropy(grid, tumor_grid):
     """
     Compute Shannon entropy for a grid considering 3 states and limiting the region to tumor radius.
     Input:
@@ -239,32 +239,11 @@ def shannon_entropy(grid):
     Output:
     - The Shannon entropy value
     """    
+    tumor_cells = np.sum(tumor_grid)
     size = grid.shape[0]
-    tumor_cells = np.sum(grid == 2)
     total_cells = size * size
     tumor_density = tumor_cells / total_cells
     
-    #flattened = []
-    #for x in range(size):
-    #    for y in range(size):
-    #        flattened.append(grid[x, y])
-
-    #flattened = np.array(flattened)
-    #total_cells = len(flattened)
-    #if total_cells == 0:
-    #    return 0
-
-    #unique_values = []
-    #counts = []
-    #for value in flattened:
-    #    if value not in unique_values:
-    #        unique_values.append(value)
-    #        counts.append(1)
-    #    else:
-    #        counts[unique_values.index(value)] += 1
-
-    #probabilities = np.array(counts) / total_cells
-    # entropy = -np.sum(probabilities * np.log2(probabilities))
     return tumor_density
 
 def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
@@ -316,7 +295,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         grid[tumor_grid] = 2   # Tumor cells
         
         # Calculate entropy for tumor cells
-        entropy = shannon_entropy(tumor_grid.astype(np.float64))
+        entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
         entropies.append(entropy)
     
     # Plotting the visualization and tumor entropy over time
