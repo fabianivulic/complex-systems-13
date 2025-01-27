@@ -3,59 +3,43 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import powerlaw
 
-# Load the data
-def plot_results():
-    experiment_type = input('Enter the experiment type (bias_factor, decay_factor, constant, distributions, scatter): ')
-    metrics = [
-        "average_degree",
-        "average_betweenness",
-        "average_page_rank",
-        "average_clustering_coefficient"]
+def plot_network_results(experiment_type):
+    metrics = ["average_degree", "average_clustering_coefficient"]
+    df = pd.read_csv(f"data/{experiment_type}_results.csv")
+    grouped_mean = df.groupby(experiment_type).mean().reset_index()
+    grouped_std = df.groupby(experiment_type).std().reset_index()
+    _, axes = plt.subplots(1, 3, figsize=(15, 5))
+    axes = axes.flatten()
 
-    if experiment_type not in ['constant', 'distributions', 'scatter']:
-        df = pd.read_csv(f"data/{experiment_type}_results.csv")
-        grouped_mean = df.groupby(experiment_type).mean().reset_index()
-        grouped_std = df.groupby(experiment_type).std().reset_index()
-        _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
-        axes = axes.flatten()
-
-        for i, metric in enumerate(metrics):
-            ax = axes[i]
-            x = grouped_mean[experiment_type]
-            y = grouped_mean[metric]
-            yerr = grouped_std[metric]
-            ax.plot(x, y, marker='o', label=f"Mean {metric.replace('_', ' ').title()}")
-            ax.fill_between(x, y - yerr, y + yerr, alpha=0.3, label="Standard Deviation")
-            ax.set_xlabel(f"{experiment_type.replace('_', ' ').title()}")
-            ax.set_ylabel(metric.replace('_', ' ').title())
-            ax.grid(False)
-        
-        plt.tight_layout()
-        plt.show()
-
-    elif experiment_type == 'constant':
-        df = pd.read_csv(f"data/{experiment_type}_results.csv")
-        _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
-        axes = axes.flatten()
-        for i, metric in enumerate(metrics):
-            ax = axes[i]
-            ax.scatter(
-                df[metric],  # x-axis
-                df["min_entropy"],  # y-axis
-                color='blue',
-                label=metric.replace('_', ' ').title(),
-                s=20
-            )
-            ax.set_xlabel(metric.replace('_', ' ').title())
-            ax.set_ylabel("Min Tumor Entropy")
-            ax.grid(False)
-
-        #plt.suptitle("Min Tumor Entropy vs. Network Metrics")
-        plt.tight_layout()
-        plt.show()
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+        x = grouped_mean[experiment_type]
+        y = grouped_mean[metric]
+        yerr = grouped_std[metric]
+        ax.plot(x, y, marker='o', label=f"Mean {metric.replace('_', ' ').title()}")
+        ax.fill_between(x, y - yerr, y + yerr, alpha=0.3, label="Standard Deviation")
+        ax.set_xlabel(f"{experiment_type.replace('_', ' ').title()}")
+        ax.grid(False)
+        ax.set_ylabel(metric.replace('_', ' ').title())
     
-    elif experiment_type == 'distributions':
+    axes[2].plot(x, grouped_mean["final_density"], marker='o', label="Mean Final Density")
+    axes[2].fill_between(x, grouped_mean["final_density"] - grouped_std["final_density"], grouped_mean["final_density"] + grouped_std["final_density"], alpha=0.3)
+    axes[2].set_ylabel("Final Tumor Entropy")
+    
+    if experiment_type == "bias_factor":
+        plt.suptitle("Bias Factor vs. Network Metrics")
+        axes[2].set_xlabel("Bias Factor")
+    elif experiment_type == "prolif_prob":
+        plt.suptitle("Proliferation Probability vs. Network Metrics")
+        axes[0].set_xlabel("Proliferation Probability")
+        axes[1].set_xlabel("Proliferation Probability")
+        axes[2].set_xlabel("Proliferation Probability")
+    plt.tight_layout()
+    plt.show()
+
+def plot_distributions():
         df = pd.read_csv(f"data/constant_results.csv")
+        metrics = ["average_degree", "average_clustering_coefficient"]
         _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
         axes = axes.flatten()
         for i, metric in enumerate(metrics):
@@ -90,32 +74,41 @@ def plot_results():
             R2, p2 = fit.distribution_compare('power_law', 'lognormal')
             print(f"R2: {R2}, p2: {p2}")
             print()
-            
-    elif experiment_type == 'scatter':
-        new_experiment_type = input('Enter the experiment type (bias_factor, decay_factor, tumor_prob): ')
-        df = pd.read_csv(f"data/{new_experiment_type}_results.csv")
-        # combined_df = pd.concat(
-        #     [pd.read_csv(f"data/{factor}_results.csv").assign(factor=factor) for factor in ['bias_factor', 'decay_factor', 'tumor_prob']],
-        #     ignore_index=True
-        # )
-        _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
-        axes = axes.flatten()
-        for i, metric in enumerate(metrics):
-            ax = axes[i]
-            scatter = ax.scatter(
-                df[metric],  # x-axis
-                df["min_entropy"],  # y-axis
-                c=df[new_experiment_type],  # color by factor
-                label=metric.replace('_', ' ').title(),
-                s=20
-            )
-            ax.set_xlabel(metric.replace('_', ' ').title())
-            ax.set_ylabel("Min Tumor Entropy")
-            ax.grid(False)
-        handles, labels = scatter.legend_elements(prop="colors", alpha=0.6)
-        axes[1].legend(handles, labels, title=f"{new_experiment_type}", bbox_to_anchor=(1.02, 1.025), loc='upper left')
-        plt.suptitle("Min Tumor Entropy vs. Network Metrics")
-        plt.tight_layout()
-        plt.show()
-    
-plot_results()
+
+def plot_scatter(experiment_type):
+    df = pd.read_csv(f"data/{experiment_type}_results.csv")
+    metrics = [
+        "average_degree",
+        "average_clustering_coefficient"]
+    _, axes = plt.subplots(1, 2, figsize=(15, 5))
+    axes = axes.flatten()
+    for i, metric in enumerate(metrics):
+        ax = axes[i]
+        scatter = ax.scatter(
+            df[metric],  # x-axis
+            df["final_density"],  # y-axis
+            c=df[experiment_type],  # color by factor
+            label=metric.replace('_', ' ').title(),
+            s=20
+        )
+        ax.set_xlabel(metric.replace('_', ' ').title())
+        ax.grid(False)
+    handles, labels = scatter.legend_elements(prop="colors", alpha=0.6)
+    axes[0].set_ylabel("Final Tumor Density")
+    for ax in axes[1:]:
+        ax.set_yticks([])
+    if experiment_type == "bias_factor":
+        axes[1].legend(handles, labels, title="Bias Factor", bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    elif experiment_type == "prolif_prob":
+        axes[1].legend(handles, labels, title="Proliferation P", bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    plt.suptitle("Final Tumor Entropy vs. Network Metrics")
+    plt.tight_layout()
+    plt.show()
+
+experiment_type = input("Enter the experiment type (bias_factor or prolif_prob): ")
+if experiment_type == "bias_factor":
+    plot_network_results("bias_factor")
+    plot_scatter("bias_factor")
+elif experiment_type == "prolif_prob":
+    plot_network_results("prolif_prob")
+    plot_scatter("prolif_prob")

@@ -246,7 +246,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -286,8 +286,8 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             seeds = new_seeds
         
         # Introduce growth and death of tumor cells after a certain time step
-        if i > breakpoint:
-            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p=0.1)
+        #if i > breakpoint:
+        growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p)
         
         # Combine grids for visualization
         grid = np.zeros((size, size))
@@ -316,7 +316,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.tight_layout()
         plt.show()
     
-    return vessel_grid, tumor_grid, min(entropies)
+    return vessel_grid, tumor_grid, entropies[-1]
 
 def vessel_image(grid, filename):
     """
@@ -361,7 +361,8 @@ def main():
         tumor_prob=tumor_prob,
         wrap_around=wrap_around,
         plot=True,
-        breakpoint=breakpoint
+        breakpoint=breakpoint, 
+        p=0.1
     )
     vessel_image(vessel_grid, 'final_grid.png')
     
