@@ -337,7 +337,7 @@ def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_facto
         plt.tight_layout()
         plt.show()
     
-    return vessel_grid, min(entropies)
+    return vessel_grid, tumor_grid, min(entropies)
 
 def vessel_image(grid, filename):
     """
@@ -372,7 +372,7 @@ def main():
     wrap_around = False
     breakpoint = 350
 
-    grid, min_entropy = simulate_CA(
+    vessel_grid, _, _ = simulate_CA(
         size=size,
         num_seeds=num_seeds,
         steps=steps,
@@ -384,7 +384,7 @@ def main():
         plot=True,
         breakpoint=breakpoint
     )
-    vessel_image(grid, 'final_grid.png')
+    vessel_image(vessel_grid, 'final_grid.png')
     
 if __name__ == "__main__":
     start_time = time.time()

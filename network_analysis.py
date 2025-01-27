@@ -6,33 +6,30 @@ average page rank, and average clustering coefficient.
 
 import numpy as np
 import pandas as pd
-from skimage import io, color, filters, morphology
+from skimage import io, color, filters, morphology, transform
 import matplotlib.pyplot as plt
 from skan import draw, Skeleton
 from skan.csr import skeleton_to_nx
 import networkx as nx
 from growthdeath_jit import simulate_CA, vessel_image
 
-import networkx as nx
-import numpy as np
-from skimage import color, filters, morphology, io
-from skan import Skeleton, draw
-from skan.csr import skeleton_to_nx
-import matplotlib.pyplot as plt
-
-
-def network_analysis(image, show_skeleton=True, show_graph=True, print_results=True):
+def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, print_results=True):
     # Convert the image to grayscale and binarize
     image = image[:, :, :3]
     image = color.rgb2gray(image)
     threshold = filters.threshold_otsu(image)
     binary_image = image > threshold
-
+    
+    expected_size = (200, 200)
+    binary_image = transform.resize(binary_image, expected_size, anti_aliasing=False)
+    if binary_image.shape[:2] != expected_size:
+        raise ValueError(f"Skeletonized image must be {expected_size}, but got {binary_image.shape[:2]}")
+    
     # Skeletonize the binary image
     skeleton = morphology.skeletonize(binary_image)
     if show_skeleton:
-        fig, ax = plt.subplots()
-        draw.overlay_skeleton_2d(image, skeleton, dilate=1, axes=ax)
+        _, ax = plt.subplots()
+        draw.overlay_skeleton_2d(binary_image, skeleton, dilate=1, axes=ax)
         plt.title("Skeletonized Image")
         plt.show()
     
@@ -53,18 +50,17 @@ def network_analysis(image, show_skeleton=True, show_graph=True, print_results=T
 
     center_node = max(graph.nodes) + 1  # Assign a new ID for the center node
     graph.add_node(center_node)
-    size = min(image.shape[0], image.shape[1])
-    radius = size / 5  # Define the connection radius
-    center_position = np.array([image.shape[0] / 2, image.shape[1] / 2])
+    size = min(binary_image.shape[0], binary_image.shape[1])
+    center_position = np.array([binary_image.shape[0] / 2, binary_image.shape[1] / 2])
 
     # Add the center node's position to the pos dictionary
     pos[center_node] = (center_position[1], center_position[0])  # Ensure consistent (x, y) format
 
-    # Connect the center node to valid graph nodes within the radius
+    # Connect the center node to valid graph nodes within the radius if they have a neighbor from the tumor grid
     for node in valid_nodes:
         node_position = np.array([pos[node][1], pos[node][0]])  # Convert back to (y, x) for distance calculation
-        distance = np.linalg.norm(node_position - center_position)
-        if distance <= radius:
+        neighbors = list(graph.neighbors(node))
+        if any(tumor_grid[int(pos[neighbor][1]), int(pos[neighbor][0])] for neighbor in neighbors):
             graph.add_edge(center_node, node)
 
     if show_graph:
@@ -87,7 +83,18 @@ def network_analysis(image, show_skeleton=True, show_graph=True, print_results=T
 
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
-#network_analysis(io.imread('images/final_grid.png'))
+# vessel_grid, tumor_grid, min_entropy = simulate_CA(
+#                     size=200, 
+#                     num_seeds=20, 
+#                     steps=500, 
+#                     bias_factor=0.9, 
+#                     decay_factor=0.9, 
+#                     neighborhood_radius=3,
+#                     tumor_prob=0.5, 
+#                     wrap_around=False,
+#                     plot=False, 
+#                     breakpoint=350)
+# network_analysis(io.imread('images/final_grid.png'), tumor_grid)
 
 def run_experiments():
     experiment_type = input('Enter the experiment type (bias_factor, decay_factor, tumor_prob, constant): ')
@@ -96,11 +103,12 @@ def run_experiments():
     if experiment_type == 'bias_factor':
         bias_factors = np.linspace(0, 0.9, 10)
         decay_factor = 0.9
+        breakpoint = 350
         results = []
         for bias_factor in bias_factors:
             for run in range(num_runs):
                 print(f'Running simulation for bias factor {bias_factor}, run {run + 1}...')
-                grid, min_entropy = simulate_CA(
+                vessel_grid, tumor_grid, min_entropy = simulate_CA(
                     size=200, 
                     num_seeds=20, 
                     steps=500, 
@@ -109,11 +117,12 @@ def run_experiments():
                     neighborhood_radius=3,
                     tumor_prob=0.5, 
                     wrap_around=False,
-                    plot=False)
+                    plot=False, 
+                    breakpoint=breakpoint)
                 
-                vessel_image(grid, 'final_grid.png')
+                vessel_image(vessel_grid, 'final_grid.png')
                 image = io.imread('images/final_grid.png')
-                average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
                 results.append({
                     'run': run + 1,
                     'bias_factor': bias_factor,
@@ -130,12 +139,13 @@ def run_experiments():
     
     elif experiment_type == 'decay_factor':
         bias_factor = 0.9
+        breakpoint =350
         decay_factors = np.linspace(0.5, 0.9, 10)
         results = []
         for decay_factor in decay_factors:
             for run in range(num_runs):
                 print(f'Running simulation for decay factor {decay_factor}, run {run + 1}...')
-                grid, min_entropy = simulate_CA(
+                vessel_grid, tumor_grid, min_entropy = simulate_CA(
                     size=200, 
                     num_seeds=20, 
                     steps=500, 
@@ -144,11 +154,12 @@ def run_experiments():
                     neighborhood_radius=10,
                     tumor_prob=0.5, 
                     wrap_around=False, 
-                    plot=False)
+                    plot=False, 
+                    breakpoint=breakpoint)
                 
-                vessel_image(grid, 'final_grid.png')
+                vessel_image(vessel_grid, 'final_grid.png')
                 image = io.imread('images/final_grid.png')
-                average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
                 results.append({
                     'run': run + 1,
                     'decay_factor': decay_factor,
@@ -164,25 +175,27 @@ def run_experiments():
         df.to_csv(f'data/{experiment_type}_results.csv', index=False)
     
     elif experiment_type == 'constant':
-        bias_factor = 0.9
-        decay_factor = 0.9
+        bias_factor = 0.93
+        decay_factor = 0.99
+        breakpoint=350
         results = []
         for run in range(num_runs):
             print(f'Running simulation for constant factors, run {run + 1}...')
-            grid, min_entropy = simulate_CA(
+            vessel_grid, tumor_grid, min_entropy = simulate_CA(
                 size=200, 
                 num_seeds=20, 
                 steps=500, 
                 bias_factor=bias_factor, 
                 decay_factor=decay_factor, 
-                neighborhood_radius=10,
+                neighborhood_radius=5,
                 tumor_prob=0.5,
                 wrap_around=False,
-                plot=False)
+                plot=False,
+                breakpoint=breakpoint)
             
-            vessel_image(grid, 'final_grid.png')
+            vessel_image(vessel_grid, 'final_grid.png')
             image = io.imread('images/final_grid.png')
-            average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+            average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
             results.append({
                 'run': run + 1,
                 'min_entropy': min_entropy,
@@ -200,11 +213,12 @@ def run_experiments():
         tumor_probs = np.linspace(0.1, 0.5, 10)
         bias_factor = 0.9
         decay_factor = 0.9
+        breakpoint=350
         results = []
         for tumor_prob in tumor_probs:
             for run in range(num_runs):
                 print(f'Running simulation for tumor_prob {tumor_prob}, run {run + 1}...')
-                grid, min_entropy = simulate_CA(
+                vessel_grid, tumor_grid, = simulate_CA(
                     size=200, 
                     num_seeds=20, 
                     steps=500, 
@@ -213,14 +227,53 @@ def run_experiments():
                     neighborhood_radius=10,
                     tumor_prob=tumor_prob,
                     wrap_around=False,
-                    plot=False)
+                    plot=False,
+                    breakpoint=breakpoint)
                 
-                vessel_image(grid, 'final_grid.png')
+                vessel_image(vessel_grid, 'final_grid.png')
                 image = io.imread('images/final_grid.png')
-                average_degree, average_betweenness, average_page_rank, average_cc, degree_dist = network_analysis(image, show_skeleton=False, show_graph=False, print_results=False)
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
                 results.append({
                     'run': run + 1,
                     'tumor_prob': tumor_prob,
+                    'min_entropy': min_entropy,
+                    'average_degree': average_degree,
+                    'average_betweenness': average_betweenness,
+                    'average_page_rank': average_page_rank,
+                    'average_clustering_coefficient': average_cc
+                })
+                print()
+        
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+        
+    if experiment_type == 'num_seeds':
+        num_seeds = np.linspace(2, 5, 4)
+        bias_factor = 0.93
+        decay_factor = 0.99
+        breakpoint=350
+        results = []
+        for num_seed in num_seeds:
+            for run in range(num_runs):
+                print(f'Running simulation for num_seed {num_seed}, run {run + 1}...')
+                vessel_grid, tumor_grid, min_entropy = simulate_CA(
+                    size=200, 
+                    num_seeds=num_seed, 
+                    steps=500, 
+                    bias_factor=bias_factor, 
+                    decay_factor=decay_factor, 
+                    neighborhood_radius=10,
+                    tumor_prob=0.5,
+                    wrap_around=False,
+                    plot=False,
+                    breakpoint=breakpoint)
+                
+                vessel_image(vessel_grid, 'final_grid.png')
+                image = io.imread('images/final_grid.png')
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
+                results.append({
+                    'run': run + 1,
+                    'num_seed': num_seed,
                     'min_entropy': min_entropy,
                     'average_degree': average_degree,
                     'average_betweenness': average_betweenness,
