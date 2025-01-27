@@ -80,7 +80,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     for x in range(size):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
-            if tumor_radius > distance > empty_radius and random.random() > tumor_prob:
+            if tumor_radius > distance > empty_radius and random.random() < tumor_prob:
                 tumor[x, y] = True
                 background[x, y] += tumor_factor
 
@@ -131,7 +131,10 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
         for y in range(size):
             distance = np.sqrt((x - center) ** 2 + (y - center) ** 2)
 
-            if not(tumor_radius > distance > empty_radius) or not tumor[x, y]:
+            # if not(tumor_radius > distance > empty_radius) or not tumor[x, y]:
+            #     continue
+
+            if not(distance > empty_radius) or not tumor[x, y]:
                 continue
 
             blood_count = len(check_blood(x, y, occupied, radius))
@@ -207,7 +210,7 @@ def update_background(background, x, y, decay_factor, radius, wrap_around=True):
                 background[nx, ny] = max(0, background[nx, ny] * (1 - weight * (1 - decay_factor)))
 
 @njit
-def move_seed(x, y, background, size, wrap_around, bias_factor):
+def move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid):
     """
     Move seed based on stochastic angiogenesis rules.
     Input:
@@ -220,6 +223,8 @@ def move_seed(x, y, background, size, wrap_around, bias_factor):
     - The new coordinates for the seed
     """
     neighbors = get_neighbors(x, y, size, wrap_around)
+    # neighbors = [(nx, ny) for (nx, ny) in neighbors if not tumor_grid[nx, ny]]
+
     move_probabilities = [(random.random() * (1 - bias_factor) + background[nx, ny] * bias_factor, nx, ny) for nx, ny in neighbors]
     move_probabilities.sort(reverse=True) # Favor higher VEGF concentration with stochasticity
 
@@ -242,9 +247,7 @@ def shannon_entropy(grid):
     flattened = []
     for x in range(size):
         for y in range(size):
-            distance = np.sqrt((x - center)**2 + (y - center)**2)
-            if tumor_radius > distance > empty_radius:
-                flattened.append(grid[x, y])
+            flattened.append(grid[x, y])
 
     flattened = np.array(flattened)
     total_cells = len(flattened)
@@ -264,7 +267,7 @@ def shannon_entropy(grid):
     entropy = -np.sum(probabilities * np.log2(probabilities))
     return entropy
 
-def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True):
+def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -295,16 +298,17 @@ def simulate_CA(size=200, num_seeds=20, steps=500, bias_factor=0.93, decay_facto
     
     for i in range(steps):
         new_seeds = []
-        for x, y in seeds:
-            nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor)
-            new_seeds.append((nx, ny))
-            vessel_grid[nx, ny] = True 
-            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
-        seeds = new_seeds
+        if i < breakpoint:
+            for x, y in seeds:
+                nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid)
+                new_seeds.append((nx, ny))
+                vessel_grid[nx, ny] = True 
+                update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
+            seeds = new_seeds
         
         # Introduce growth and death of tumor cells after a certain time step
-        if i > 400:
-            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p=0.01)
+        if i > breakpoint:
+            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p=0.1)
         
         # Combine grids for visualization
         grid = np.zeros((size, size))
@@ -364,8 +368,9 @@ def main():
     bias_factor = 0.93
     decay_factor = 0.99
     neighborhood_radius = 10
-    tumor_prob = 0.5
+    tumor_prob = 0.3
     wrap_around = False
+    breakpoint = 350
 
     grid, min_entropy = simulate_CA(
         size=size,
@@ -376,7 +381,8 @@ def main():
         neighborhood_radius=neighborhood_radius,
         tumor_prob=tumor_prob,
         wrap_around=wrap_around,
-        plot=True
+        plot=True,
+        breakpoint=breakpoint
     )
     vessel_image(grid, 'final_grid.png')
     
