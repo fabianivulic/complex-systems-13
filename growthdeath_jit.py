@@ -71,6 +71,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
     - tumor_factor: The factor by which the VEGF value of a tumor cell is multiplied
     Output:
     - A set of coordinates for the tumor cells
+
     """
     tumor = np.zeros((size, size), dtype=np.bool_)
     center = size // 2
@@ -107,7 +108,7 @@ def check_blood(x, y, occupied, radius):
     return blood
 
 @njit
-def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
+def growth_death(background, size, tumor, tumor_factor, radius, occupied, p, midpoint_sigmoid):
     """Determines growth/death of tumor cells based on how many blood vessels cells surround it.
     Input:
     - background: The grid with VEGF values
@@ -138,7 +139,7 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
                 continue
 
             blood_count = len(check_blood(x, y, occupied, radius))
-            blood_bias = 1 / (1 + np.exp(-1 * (blood_count-1)))
+            blood_bias = 1 / (1 + np.exp(-1 * (blood_count-midpoint_sigmoid)))
             growth, death = p * (blood_bias), p * (1-blood_bias)
             
             if random.random() <= growth:
@@ -288,6 +289,8 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         # Introduce growth and death of tumor cells after a certain time step
         #if i > breakpoint:
         growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p)
+        if i > breakpoint:
+            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p=prolif_prob, midpoint_sigmoid=midpoint_sigmoid)
         
         # Combine grids for visualization
         grid = np.zeros((size, size))
@@ -295,8 +298,8 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         grid[tumor_grid] = 2   # Tumor cells
         
         # Calculate entropy for tumor cells
-        entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
-        entropies.append(entropy)
+    entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
+    
     
     # Plotting the visualization and tumor entropy over time
     if plot:
@@ -317,6 +320,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.show()
     
     return vessel_grid, tumor_grid, entropies[-1]
+    return vessel_grid, tumor_grid, entropy
 
 def vessel_image(grid, filename):
     """
@@ -349,7 +353,9 @@ def main():
     neighborhood_radius = 10
     tumor_prob = 0.3
     wrap_around = False
-    breakpoint = 350
+    breakpoint = 400
+    prolif_prob = 0.1
+    midpoint_sigmoid = 1
 
     vessel_grid, _, _ = simulate_CA(
         size=size,
@@ -363,6 +369,9 @@ def main():
         plot=True,
         breakpoint=breakpoint, 
         p=0.1
+        breakpoint=breakpoint,
+        prolif_prob=prolif_prob,
+        midpoint_sigmoid = midpoint_sigmoid
     )
     vessel_image(vessel_grid, 'final_grid.png')
     
