@@ -338,7 +338,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     
     return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time
 
-def animate_histogram(cluster_sizes_over_time, plot_steps):
+def animate_histogram(cluster_sizes_over_time, plot_steps, plot=False):
     """
     Create an animated histogram showing the distribution of cluster sizes over time,
     with a fitted curve overlayed on the bars and a fixed y-axis.
@@ -439,7 +439,6 @@ def tumor_clusters(size, tumor_grid, wrap_around = False, plot = True):
 
     return clusters, cluster_sizes
 
-
 def main():
     """
     Main function to execute the simulation.
@@ -466,16 +465,16 @@ def main():
         neighborhood_radius=neighborhood_radius,
         tumor_prob=tumor_prob,
         wrap_around=wrap_around,
-        plot=True,
+        plot=False,
         breakpoint=breakpoint, 
         p=p,
         plot_steps=10,
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness
     )
-    vessel_image(vessel_grid, 'final_grid.png')
-    animate_histogram(cluster_sizes_over_time, 10)
-    
+    # vessel_image(vessel_grid, 'final_grid.png')
+    # animate_histogram(cluster_sizes_over_time, 10, plot=False)
+
 if __name__ == "__main__":
     start_time = time.time()
     main()
