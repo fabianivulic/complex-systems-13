@@ -107,7 +107,7 @@ def check_blood(x, y, occupied, radius):
     return blood
 
 @njit
-def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
+def growth_death(background, size, tumor, tumor_factor, radius, occupied, p, midpoint_sigmoid, steepness):
     """Determines growth/death of tumor cells based on how many blood vessels cells surround it.
     Input:
     - background: The grid with VEGF values
@@ -138,7 +138,7 @@ def growth_death(background, size, tumor, tumor_factor, radius, occupied, p):
                 continue
 
             blood_count = len(check_blood(x, y, occupied, radius))
-            blood_bias = 1 / (1 + np.exp(-1 * (blood_count-1)))
+            blood_bias = 1 / (1 + np.exp(-steepness * (blood_count-midpoint_sigmoid)))
             growth, death = p * (blood_bias), p * (1-blood_bias)
             
             if random.random() <= growth:
@@ -246,7 +246,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, midpoint_sigmoid=1, steepness=1):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -287,7 +287,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         
         # Introduce growth and death of tumor cells after a certain time step
         #if i > breakpoint:
-        growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p)
+        growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p, midpoint_sigmoid, steepness)
         
         # Combine grids for visualization
         grid = np.zeros((size, size))
@@ -350,6 +350,9 @@ def main():
     tumor_prob = 0.3
     wrap_around = False
     breakpoint = 350
+    p = 0.1
+    midpoint_sigmoid = 1
+    steepness = 1
 
     vessel_grid, _, _ = simulate_CA(
         size=size,
@@ -362,7 +365,9 @@ def main():
         wrap_around=wrap_around,
         plot=True,
         breakpoint=breakpoint, 
-        p=0.1
+        p=p,
+        midpoint_sigmoid=midpoint_sigmoid,
+        steepness=steepness
     )
     vessel_image(vessel_grid, 'final_grid.png')
     
