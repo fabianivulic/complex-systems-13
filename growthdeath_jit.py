@@ -8,6 +8,8 @@ from matplotlib.colors import ListedColormap
 import random
 from numba import njit
 import time
+from matplotlib.animation import FuncAnimation
+from scipy.interpolate import make_interp_spline
 
 def initialize_seeds(size, seeds_per_edge=5):
     """
@@ -246,7 +248,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, midpoint_sigmoid=1, steepness=1):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -257,6 +259,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     - decay_factor: The factor by which the VEGF value is multiplied
     - neighborhood_radius: The radius of the neighborhood to consider
     - wrap_around: A boolean to enable periodic boundaries
+    - plot_steps: The number of evenly spaced time steps to plot
     Output:
     - The Shannon entropy value in the last time step
     """
@@ -274,6 +277,8 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     # Initialize tumor cells
     tumor_grid = create_tumor(size, background, tumor_prob, tumor_factor)
     entropies = []
+    cluster_sizes_over_time = []
+    cluster_counts = []
     
     for i in range(steps):
         new_seeds = []
@@ -297,8 +302,15 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         # Calculate entropy for tumor cells
         entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
         entropies.append(entropy)
+
+        if i % plot_steps == 0:
+            # Calculate number of tumor clusters
+            tumor_coordinates = set(zip(*np.where(tumor_grid)))
+            cluster_count, cluster_sizes = tumor_clusters(size, tumor_coordinates, wrap_around, plot=False)
+            cluster_sizes_over_time.append(cluster_sizes)
+            cluster_counts.append(cluster_count)
     
-    # Plotting the visualization and tumor entropy over time
+    # Plotting the visualization and tumor entropy, and cluster count over time
     if plot:
         plt.figure(figsize=(10, 5))
         cmap = ListedColormap(["white", "red", "green"])
@@ -315,8 +327,63 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.legend()
         plt.tight_layout()
         plt.show()
+
+        plt.plot(cluster_counts, label="Number of Tumor Clusters", color = "orange")
+        plt.title("Tumor Clustering Over Time")
+        plt.xlabel("Time Step")
+        plt.ylabel("Number of Clusters")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
     
-    return vessel_grid, tumor_grid, entropies[-1]
+    return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time
+
+def animate_histogram(cluster_sizes_over_time, plot_steps):
+    """
+    Create an animated histogram showing the distribution of cluster sizes over time,
+    with a fitted curve overlayed on the bars and a fixed y-axis.
+    """
+    # Find the maximum frequency across all time steps
+    max_frequency = 0
+    for cluster_sizes in cluster_sizes_over_time:
+        frequencies, _ = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
+        max_frequency = max(max_frequency, max(frequencies))
+
+    # Set up the figure and axis
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.set_title("Cluster Size Distribution Over Time")
+    ax.set_xlabel("Cluster Size")
+    ax.set_ylabel("Frequency")
+    ax.set_ylim(0, max_frequency + 1)  # Fix the y-axis
+
+    def update(frame):
+        ax.clear()  # Clear the previous histogram and curve
+        cluster_sizes = cluster_sizes_over_time[frame]
+        
+        # Histogram data
+        frequencies, bin_edges = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Compute bin centers
+        
+        # Plot histogram
+        ax.hist(cluster_sizes, bins=bin_edges, color="blue", edgecolor="black", alpha=0.7, label="Histogram")
+        
+        # Fit a smooth curve to the histogram data
+        if len(bin_centers) > 3:  # Fit only if enough data points exist
+            spline = make_interp_spline(bin_centers, frequencies, k=3)  # Cubic spline for smooth curve
+            x_smooth = np.linspace(bin_centers[0], bin_centers[-1], 200)  # Dense x-values for smooth curve
+            y_smooth = spline(x_smooth)
+            ax.plot(x_smooth, y_smooth, color="red", linewidth=2, label="Fitted Curve")
+        
+        # Set titles and labels
+        ax.set_title(f"Cluster Size Distribution at Time Step {frame * plot_steps}")
+        ax.set_xlabel("Cluster Size")
+        ax.set_ylabel("Frequency")
+        ax.set_ylim(0, max_frequency + 1)  # Keep the y-axis fixed
+        ax.legend()
+
+    # Create the animation
+    anim = FuncAnimation(fig, update, frames=len(cluster_sizes_over_time), repeat=False)
+    plt.show()
 
 def vessel_image(grid, filename):
     """
@@ -337,6 +404,42 @@ def vessel_image(grid, filename):
     bw_fig.savefig(f'images/{filename}', dpi=300, bbox_inches='tight', pad_inches=0)
     plt.close(bw_fig)
 
+def tumor_clusters(size, tumor_grid, wrap_around = False, plot = True):
+    """
+    Analyze tumor clustering over time.
+    Input:
+    - size: The size of the grid
+    - tumor_grid: The grid with tumor cells
+    - wrap_around: A boolean to enable periodic boundaries
+    - plot: A boolean to enable plotting
+
+    Output:
+    - cluster counts: The number of tumor clusters over time
+    """
+    visited = set()
+    clusters = 0
+    cluster_sizes = []
+
+    for cell in tumor_grid:
+        if cell not in visited:
+            # Depth-first search to find all connected tumor cells
+            stack = [cell]
+            cluster_nodes = []
+            while stack:
+                cx, cy = stack.pop()
+                if (cx, cy) not in visited:
+                    visited.add((cx, cy))
+                    cluster_nodes.append((cx, cy))
+                    neighbors = get_neighbors(cx, cy, size, wrap_around)
+                    stack.extend(n for n in neighbors if n in tumor_grid)
+
+            if len(cluster_nodes) >= 1: # Minimum cluster size
+                clusters += 1
+                cluster_sizes.append(len(cluster_nodes))
+
+    return clusters, cluster_sizes
+
+
 def main():
     """
     Main function to execute the simulation.
@@ -354,7 +457,7 @@ def main():
     midpoint_sigmoid = 1
     steepness = 1
 
-    vessel_grid, _, _ = simulate_CA(
+    vessel_grid, _, _, cluster_sizes_over_time = simulate_CA(
         size=size,
         seeds_per_edge=seeds_per_edge,
         steps=steps,
@@ -366,10 +469,12 @@ def main():
         plot=True,
         breakpoint=breakpoint, 
         p=p,
+        plot_steps=10,
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness
     )
     vessel_image(vessel_grid, 'final_grid.png')
+    animate_histogram(cluster_sizes_over_time, 10)
     
 if __name__ == "__main__":
     start_time = time.time()
