@@ -8,6 +8,7 @@ from matplotlib.colors import ListedColormap
 import random
 from numba import njit
 import time
+import os
 from matplotlib.animation import FuncAnimation
 from scipy.interpolate import make_interp_spline
 
@@ -248,7 +249,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -267,6 +268,10 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     vessel_grid = np.zeros((size, size), dtype=np.bool_) # Need to be separately delineated 
     tumor_grid = np.zeros((size, size), dtype=np.bool_)  # so they can occupy the same space
     tumor_factor = 0.1
+
+    if save_networks:
+        tumor_grids = []
+        timesteps = []
     
     # Initialize seeds for blood vessels at random positions
     seeds = initialize_seeds(size, seeds_per_edge)
@@ -309,6 +314,12 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
         entropies.append(entropy)
 
+        if save_networks and i % 50 == 0:
+            print('here')
+            vessel_image(vessel_grid, filename=f'grid_{i}.png',foldername='images_time')
+            tumor_grids.append(tumor_grid)
+            timesteps.append(i)
+            
         if i % plot_steps == 0:
             # Calculate number of tumor clusters
             tumor_coordinates = set(zip(*np.where(tumor_grid)))
@@ -338,7 +349,11 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.tight_layout()
         plt.show()
     
-    return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time
+    if save_networks:
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, tumor_grids, timesteps
+    
+    else:
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time
 
 def animate_histogram(cluster_sizes_over_time, plot_steps):
     """
@@ -387,7 +402,7 @@ def animate_histogram(cluster_sizes_over_time, plot_steps):
     anim = FuncAnimation(fig, update, frames=len(cluster_sizes_over_time), repeat=False)
     plt.show()
 
-def vessel_image(grid, filename):
+def vessel_image(grid, filename, foldername="images"):
     """
     Create a vessel image from the grid.
     Input:
@@ -399,11 +414,12 @@ def vessel_image(grid, filename):
     image[grid == 1] = 255  # Set blood vessel cells to white
 
     # Save the black-and-white image
+    os.makedirs(foldername, exist_ok=True)
     bw_fig, bw_ax = plt.subplots(figsize=(6, 6))
     bw_ax.imshow(image, cmap='gray', interpolation='nearest')
     bw_ax.axis('off')
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Remove padding
-    bw_fig.savefig(f'images/{filename}', dpi=300, bbox_inches='tight', pad_inches=0)
+    bw_fig.savefig(f'{foldername}/{filename}', dpi=300, bbox_inches='tight', pad_inches=0)
     plt.close(bw_fig)
 
 def tumor_clusters(size, tumor_grid, wrap_around = False, plot = True):
@@ -475,7 +491,7 @@ def main():
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness
     )
-    vessel_image(vessel_grid, 'final_grid_.png')
+    vessel_image(vessel_grid, 'final_grid.png')
     # animate_histogram(cluster_sizes_over_time, 10)
     
 if __name__ == "__main__":
