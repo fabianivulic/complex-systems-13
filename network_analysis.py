@@ -94,7 +94,7 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 # network_analysis(io.imread('images/final_grid.png'), tumor_grid)
 
 def run_experiments():
-    experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, constant): ')
+    experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, steepness, constant): ')
     num_runs = int(input('Enter the number of runs for each experimental value (if constant, the total number of runs): '))
     
     if experiment_type == 'bias_factor':
@@ -105,7 +105,7 @@ def run_experiments():
         for bias_factor in bias_factors:
             for run in range(num_runs):
                 print(f'Running simulation for bias factor {bias_factor}, run {run + 1}...')
-                vessel_grid, tumor_grid, final_density = simulate_CA(
+                vessel_grid, tumor_grid, final_density, _ = simulate_CA(
                     size=200, 
                     seeds_per_edge=5, 
                     steps=500, 
@@ -143,7 +143,7 @@ def run_experiments():
         for prolif_prob in p_factors:
             for run in range(num_runs):
                 print(f'Running simulation for prolif_prob {prolif_prob}, run {run + 1}...')
-                vessel_grid, tumor_grid, final_density = simulate_CA(
+                vessel_grid, tumor_grid, final_density, _ = simulate_CA(
                     size=200, 
                     seeds_per_edge=5, 
                     steps=500, 
@@ -173,6 +173,90 @@ def run_experiments():
         df = pd.DataFrame(results)
         df.to_csv(f'data/{experiment_type}_results_1.csv', index=False)
     
+    elif experiment_type == 'midpoint_sigmoid':
+        bias_factor = 0.93
+        decay_factor = 0.99
+        breakpoint =350
+        midpoints = np.linspace(1, 5, 20)
+        results = []
+        for midpoint in midpoints:
+            for run in range(num_runs):
+                print(f'Running simulation for midpoint {midpoint}, run {run + 1}...')
+                vessel_grid, tumor_grid, final_density, _ = simulate_CA(
+                    size=200, 
+                    seeds_per_edge=5, 
+                    steps=500, 
+                    bias_factor=bias_factor, 
+                    decay_factor=decay_factor, 
+                    neighborhood_radius=10,
+                    tumor_prob=0.5, 
+                    wrap_around=False, 
+                    plot=False, 
+                    breakpoint=breakpoint,
+                    p=0.1,
+                    plot_steps=1,
+                    midpoint_sigmoid=midpoint,
+                    steepness=1)
+                
+                vessel_image(vessel_grid, 'final_grid.png')
+                image = io.imread('images/final_grid.png')
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
+                results.append({
+                    'run': run + 1,
+                    'midpoint_sigmoid': midpoint,
+                    'final_density': final_density,
+                    'average_degree': average_degree,
+                    'average_betweenness': average_betweenness,
+                    'average_page_rank': average_page_rank,
+                    'average_clustering_coefficient': average_cc
+                })
+                print()
+        
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+        
+    elif experiment_type == 'steepness':
+        bias_factor = 0.93
+        decay_factor = 0.99
+        breakpoint =350
+        k_values = np.linspace(1, 5, 20)
+        results = []
+        for k_value in k_values:
+            for run in range(num_runs):
+                print(f'Running simulation for steepness {k_value}, run {run + 1}...')
+                vessel_grid, tumor_grid, final_density, _ = simulate_CA(
+                    size=200, 
+                    seeds_per_edge=5, 
+                    steps=500, 
+                    bias_factor=bias_factor, 
+                    decay_factor=decay_factor, 
+                    neighborhood_radius=10,
+                    tumor_prob=0.5, 
+                    wrap_around=False, 
+                    plot=False, 
+                    breakpoint=breakpoint,
+                    p=0.1,
+                    plot_steps=1,
+                    midpoint_sigmoid=1,
+                    steepness=k_value)
+                
+                vessel_image(vessel_grid, 'final_grid.png')
+                image = io.imread('images/final_grid.png')
+                average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(image, tumor_grid, show_skeleton=False, show_graph=False, print_results=False)
+                results.append({
+                    'run': run + 1,
+                    'steepness': k_value,
+                    'final_density': final_density,
+                    'average_degree': average_degree,
+                    'average_betweenness': average_betweenness,
+                    'average_page_rank': average_page_rank,
+                    'average_clustering_coefficient': average_cc
+                })
+                print()
+        
+        df = pd.DataFrame(results)
+        df.to_csv(f'data/{experiment_type}_results.csv', index=False)
+        
     elif experiment_type == 'constant':
         bias_factor = 0.93
         decay_factor = 0.99

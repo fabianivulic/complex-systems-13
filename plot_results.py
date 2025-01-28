@@ -24,7 +24,7 @@ def plot_network_results(experiment_type):
     
     axes[2].plot(x, grouped_mean["final_density"], marker='o', label="Mean Final Density")
     axes[2].fill_between(x, grouped_mean["final_density"] - grouped_std["final_density"], grouped_mean["final_density"] + grouped_std["final_density"], alpha=0.3)
-    axes[2].set_ylabel("Final Tumor Entropy")
+    axes[2].set_ylabel("Final Tumor Density")
     
     if experiment_type == "bias_factor":
         plt.suptitle("Bias Factor vs. Network Metrics")
@@ -34,6 +34,16 @@ def plot_network_results(experiment_type):
         axes[0].set_xlabel("Proliferation Probability")
         axes[1].set_xlabel("Proliferation Probability")
         axes[2].set_xlabel("Proliferation Probability")
+    elif experiment_type == "midpoint_sigmoid":
+        plt.suptitle("Sigmoid Midpoint vs. Network Metrics")
+        axes[0].set_xlabel("Sigmoid Midpoint")
+        axes[1].set_xlabel("Sigmoid Midpoint")
+        axes[2].set_xlabel("Sigmoid Midpoint")
+    elif experiment_type == "steepness":
+        plt.suptitle("Growth/Death Steepness vs. Network Metrics")
+        axes[0].set_xlabel("Steepness")
+        axes[1].set_xlabel("Steepness")
+        axes[2].set_xlabel("Steepness")
     plt.tight_layout()
     plt.show()
 
@@ -101,14 +111,24 @@ def plot_scatter(experiment_type):
         axes[1].legend(handles, labels, title="Bias Factor", bbox_to_anchor=(1.02, 1.02), loc='upper left')
     elif experiment_type == "prolif_prob":
         axes[1].legend(handles, labels, title="Proliferation P", bbox_to_anchor=(1.02, 1.02), loc='upper left')
-    plt.suptitle("Final Tumor Entropy vs. Network Metrics")
+    elif experiment_type == "midpoint_sigmoid":
+        axes[1].legend(handles, labels, title="Sigmoid Midpoint", bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    elif experiment_type == "steepness":
+        axes[1].legend(handles, labels, title="Steepness", bbox_to_anchor=(1.02, 1.02), loc='upper left')
+    plt.suptitle("Final Tumor Density vs. Network Metrics")
     plt.tight_layout()
     plt.show()
 
-experiment_type = input("Enter the experiment type (bias_factor or prolif_prob): ")
+experiment_type = input("Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, steepness): ")
 if experiment_type == "bias_factor":
     plot_network_results("bias_factor")
     plot_scatter("bias_factor")
 elif experiment_type == "prolif_prob":
     plot_network_results("prolif_prob")
     plot_scatter("prolif_prob")
+elif experiment_type == "midpoint_sigmoid":
+    plot_network_results("midpoint_sigmoid")
+    plot_scatter("midpoint_sigmoid")
+elif experiment_type == "steepness":
+    plot_network_results("steepness")
+    plot_scatter("steepness")

@@ -282,17 +282,17 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     
     for i in range(steps):
         new_seeds = []
-        if i < breakpoint:
-            for x, y in seeds:
-                nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid)
-                new_seeds.append((nx, ny))
-                vessel_grid[nx, ny] = True 
-                update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
-            seeds = new_seeds
+        #if i < breakpoint:
+        for x, y in seeds:
+            nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid)
+            new_seeds.append((nx, ny))
+            vessel_grid[nx, ny] = True 
+            update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
+        seeds = new_seeds
         
         # Introduce growth and death of tumor cells after a certain time step
-        #if i > breakpoint:
-        growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p, midpoint_sigmoid, steepness)
+        if i > breakpoint:
+            growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p, midpoint_sigmoid, steepness)
         
         # Combine grids for visualization
         grid = np.zeros((size, size))
