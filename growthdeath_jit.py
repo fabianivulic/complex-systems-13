@@ -282,18 +282,24 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     
     for i in range(steps):
         new_seeds = []
-        #if i < breakpoint:
+
         for x, y in seeds:
             nx, ny = move_seed(x, y, background, size, wrap_around, bias_factor, tumor_grid)
             new_seeds.append((nx, ny))
             vessel_grid[nx, ny] = True 
             update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
+
         seeds = new_seeds
         
         # Introduce growth and death of tumor cells after a certain time step
         if i > breakpoint:
             growth_death(background, size, tumor_grid, tumor_factor, 2, vessel_grid, p, midpoint_sigmoid, steepness)
         
+        if i == breakpoint:
+            grid_breakpoint = np.zeros((size, size))
+            grid_breakpoint[vessel_grid] = 1  # Blood vessels
+            grid_breakpoint[tumor_grid] = 2   # Tumor cells
+
         # Combine grids for visualization
         grid = np.zeros((size, size))
         grid[vessel_grid] = 1  # Blood vessels
@@ -316,18 +322,14 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         cmap = ListedColormap(["white", "red", "green"])
         print(f"Number of blood vessel pixels: {np.sum(vessel_grid)}")
         print(f"Number of tumor pixels: {np.sum(tumor_grid)}")
-        plt.subplot(1, 2, 1)
-        plt.imshow(grid, cmap=cmap)
-        plt.title("Angiogenesis-Based CA Growth with Stochasticity")
         plt.subplot(1, 2, 2)
-        plt.plot(entropies, label="Shannon Entropy")
-        plt.title("Tumor Shannon Entropy Over Time")
-        plt.xlabel("Time Step")
-        plt.ylabel("Entropy")
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
+        plt.imshow(grid, cmap=cmap)
+        plt.title("Final")
+        plt.subplot(1, 2, 1)
+        plt.imshow(grid_breakpoint, cmap=cmap)
+        plt.title("Breakpoint")
 
+        plt.figure()
         plt.plot(cluster_counts, label="Number of Tumor Clusters", color = "orange")
         plt.title("Tumor Clustering Over Time")
         plt.xlabel("Time Step")
@@ -473,8 +475,8 @@ def main():
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness
     )
-    vessel_image(vessel_grid, 'final_grid.png')
-    animate_histogram(cluster_sizes_over_time, 10)
+    vessel_image(vessel_grid, 'final_grid_.png')
+    # animate_histogram(cluster_sizes_over_time, 10)
     
 if __name__ == "__main__":
     start_time = time.time()
