@@ -115,7 +115,11 @@ def run_experiments():
                     tumor_prob=0.5, 
                     wrap_around=False,
                     plot=False, 
-                    breakpoint=breakpoint)
+                    breakpoint=breakpoint,
+                    p=0.1, 
+                    plot_steps = 5, 
+                    midpoint_sigmoid=1, 
+                    steepness=1)
                 
                 vessel_image(vessel_grid, 'final_grid.png')
                 image = io.imread('images/final_grid.png')
@@ -154,7 +158,10 @@ def run_experiments():
                     wrap_around=False, 
                     plot=False, 
                     breakpoint=breakpoint,
-                    p=prolif_prob)
+                    p=prolif_prob,
+                    plot_steps = 5, 
+                    midpoint_sigmoid=1, 
+                    steepness=1)
                 
                 vessel_image(vessel_grid, 'final_grid.png')
                 image = io.imread('images/final_grid.png')
