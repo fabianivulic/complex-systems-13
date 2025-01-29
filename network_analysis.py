@@ -80,18 +80,18 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
-# vessel_grid, tumor_grid, min_entropy = simulate_CA(
-#                     size=200, 
-#                     num_seeds=20, 
-#                     steps=500, 
-#                     bias_factor=0.9, 
-#                     decay_factor=0.9, 
-#                     neighborhood_radius=3,
-#                     tumor_prob=0.5, 
-#                     wrap_around=False,
-#                     plot=False, 
-#                     breakpoint=350)
-# network_analysis(io.imread('images/final_grid.png'), tumor_grid)
+vessel_grid, tumor_grid, min_entropy, _ = simulate_CA(
+                    size=200, 
+                    seeds_per_edge=5, 
+                    steps=10, 
+                    bias_factor=0.93, 
+                    decay_factor=0.99, 
+                    neighborhood_radius=10,
+                    tumor_prob=0.3,
+                    wrap_around=False,
+                    plot=False, 
+                    breakpoint=350)
+network_analysis(io.imread('images/final_grid.png'), tumor_grid)
 
 def run_experiments():
     experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, steepness, constant): ')
@@ -299,4 +299,4 @@ def run_experiments():
         df = pd.DataFrame(results)
         df.to_csv(f'data/{experiment_type}_results.csv', index=False)
 
-run_experiments()
+# run_experiments()
