@@ -367,10 +367,10 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
 
     
     if save_networks:
-        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, tumor_grids, timesteps
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, grid_vessel_breakpoint, tumor_grids, timesteps
     
     else:
-        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, grid_vessel_breakpoint
 
 def animate_histogram(cluster_sizes_over_time, plot_steps):
     """
