@@ -2,6 +2,7 @@ import powerlaw
 import numpy as np
 import matplotlib.pyplot as plt
 from growthdeath_jit import simulate_CA
+from collections import Counter
 
 def analyze_power_law(cluster_sizes, plot = False):
     """
@@ -20,16 +21,23 @@ def analyze_power_law(cluster_sizes, plot = False):
     results["alpha"] = fit.power_law.alpha
     results["xmin"] = fit.power_law.xmin
 
+    R_list, p_value_list = [], []
     # Compute goodness of fit metrics
-    R, p_value = fit.distribution_compare('power_law', 'exponential', normalized_ratio=True)
-    results["R"] = R
-    results["p_value"] = p_value
-    results["is_power_law"] = p_value < 0.05 and R > 0
+    R_exp, p_value_exp = fit.distribution_compare('power_law', 'exponential', normalized_ratio=True)
+    R_log, p_value_log = fit.distribution_compare('power_law', 'lognormal', normalized_ratio=True)
+    R_tpl, p_value_tpl = fit.distribution_compare('power_law', 'truncated_power_law', normalized_ratio=True)
+    R_lt, p_value_lt = fit.distribution_compare('lognormal', 'truncated_power_law', normalized_ratio=True)
 
-    print(f"Estimated alpha: {results['alpha']:.2f}")
-    print(f"Estimated x_min: {results['xmin']:.2f}")
-    print(f"R: {results['R']:.2f}")
-    print(f"p-value: {results['p_value']:.2f}")
+    R_list.extend([R_exp, R_log, R_tpl, R_lt])
+    p_value_list.extend([p_value_exp, p_value_log, p_value_tpl, p_value_lt])    
+
+    #results["R"] = R_list
+    # results["p_value"] = p_value_list
+    results["is_power_law"] = (i in p_value_list < 0.05 for i in p_value_list) and (i in R_list > 0 for i in R_list) 
+
+    print(f"Estimated alpha: {results['alpha']}")
+    print(f"R: {R_list}")
+    print(f"p-value: {p_value_list}")
     print(f"Is Power Law: {results['is_power_law']}")
 
     # Plot the power law distribution
@@ -60,7 +68,7 @@ def combine_datasets(num_datasets):
     """
     combined_dataset = []
     for i in range(num_datasets):
-        _, _, _, cluster_sizes = simulate_CA(plot=False, bias_factor=0.93)
+        _, _, _, cluster_sizes = simulate_CA(plot=False, bias_factor=0.93, tumor_prob=0.3)
         combined_dataset.extend(cluster_sizes[-1])
         print(f"Dataset {i+1} completed.")
     return combined_dataset
@@ -125,7 +133,7 @@ def simulations():
         results = analyze_power_law(combined_dataset, plot=True)
         return results
 
-simulations()
+#simulations()
 
 # Testing power-law for different bias values
 test = input("Do you want to test the power-law fit for different bias values? (y/n): ")
@@ -159,3 +167,24 @@ if test == "y":
         ))
 else:
     print("Ok.")
+
+
+def combine_datasets(num_datasets):
+    """
+    Combine multiple datasets into a single dataset.
+    Input:
+    - num_datasets: Number of datasets to combine
+    """
+    combined_dataset_start = []
+    combined_dataset_end = []
+    for i in range(num_datasets):
+        _, _, _, cluster_sizes = simulate_CA(plot=False, bias_factor=0.93)
+        combined_dataset_start.extend(cluster_sizes[-1])
+        combined_dataset_end.extend(cluster_sizes[0])
+        print(f"Dataset {i+1} completed.")
+    return combined_dataset_start, combined_dataset_end
+
+combine_datasets_start, combine_datasets_end = combine_datasets(20)
+
+analyze_power_law(combine_datasets_start, plot=True)
+analyze_power_law(combine_datasets_end, plot=True)
