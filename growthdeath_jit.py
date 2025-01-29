@@ -249,7 +249,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False, network_steps=50):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -314,7 +314,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
         entropies.append(entropy)
 
-        if save_networks and i % 50 == 0:
+        if save_networks and i % network_steps == 0:
             print('here')
             vessel_image(vessel_grid, filename=f'grid_{i}.png',foldername='images_time')
             tumor_grids.append(tumor_grid)

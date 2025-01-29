@@ -6,8 +6,10 @@ from skan import draw, Skeleton
 from skan.csr import skeleton_to_nx
 import networkx as nx
 import os
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.stats as stats
 from growthdeath_jit import simulate_CA, vessel_image
-# from network_analysis import network_analysis
 
 def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, print_results=True):
     # Convert the image to grayscale and binarize
@@ -78,92 +80,106 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
 
-num_runs = 1
-bias_factor = 0.93
-decay_factor = 0.99
-breakpoint=350
-results = []
+    # run code, saving the images
 
-# run code, saving the images
 def run_sim():
-    for run in range(num_runs):
-        print(f'Running simulation for constant factors, run {run + 1}...')
-        vessel_grid, tumor_grid, final_density, cluster_sizes_over_time, tumor_grids, timesteps = simulate_CA(
-        size=200, 
-        seeds_per_edge=5, 
-        steps=500, 
-        bias_factor=bias_factor, 
-        decay_factor=decay_factor, 
-        neighborhood_radius=5,
-        tumor_prob=0.5,
-        wrap_around=False,
-        plot=False,
-        breakpoint=breakpoint,
-        save_networks=True)
+    print('run')
+    bias_factor = 0.93
+    decay_factor = 0.99
+    breakpoint=350
+    network_steps = 10
+
+    vessel_grid, tumor_grid, final_density, cluster_sizes_over_time, tumor_grids, timesteps = simulate_CA(
+    size=200, 
+    seeds_per_edge=5, 
+    steps=500, 
+    bias_factor=bias_factor, 
+    decay_factor=decay_factor, 
+    neighborhood_radius=5,
+    tumor_prob=0.5,
+    wrap_around=False,
+    plot=False,
+    breakpoint=breakpoint,
+    save_networks=True,
+    network_steps=network_steps)
+
     return tumor_grids, timesteps
 
-tumor_grids, timesteps = run_sim()
+def run_and_statistics():
+    results = []
+    tumor_grids, timesteps = run_sim()
+    images_folder = "images_time"  # Folder containing images
 
-results = []
-timesteps_str = ['0', '50', '100', '150', '200', '250', '300', '350', '400', '450']
-# timesteps = []
-images_folder = "images_time"  # Folder containing images
-print(os.listdir(images_folder))
-# for i, filename in enumerate(os.listdir(images_folder)):  # Iterate over files in the folder
-for i in range(len(os.listdir(images_folder))):
-    # timesteps.append(int(filename.split("_")[1].split(".")[0]))
+    for i, timestep in enumerate(timesteps):
+        filename = f'grid_{timestep}.png'
+        image_path = os.path.join(images_folder, filename)  # Full path to the image
+        
+        image = io.imread(image_path)  # Read the image
+        average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(
+            image, tumor_grids[i], show_skeleton=False, show_graph=False, print_results=False
+        )
+
+        results.append({
+            'average_degree': average_degree,
+            'average_betweenness': average_betweenness,
+            'average_page_rank': average_page_rank,
+            'average_clustering_coefficient': average_cc
+        })
+
+    return results, timesteps
+
+big_results = []
+for i in range(10):
+    results, timesteps = run_and_statistics()
+    big_results.append(results)
+
+def compute_mean_and_ci(data, confidence=0.95):
+    """
+    Computes the mean and confidence interval for a given list of lists (data over multiple runs).
+    """
+    data = np.array(data)
+    mean = np.mean(data, axis=0)
+    sem = stats.sem(data, axis=0, nan_policy='omit')  # Standard error of the mean
+    ci = sem * stats.t.ppf((1 + confidence) / 2., len(data) - 1)  # Confidence interval
+    return mean, ci
+
+def plot(big_results,timesteps): 
+    # Extracting network statistics from big_results (list of lists)
+    avg_degrees = [[res['average_degree'] for res in run] for run in big_results]
+    avg_betweennesses = [[res['average_betweenness'] for res in run] for run in big_results]
+    avg_clustering_coefficients = [[res['average_clustering_coefficient'] for res in run] for run in big_results]
     
-    filename = f'grid_{timesteps_str[i]}.png'
-    print(filename)
-    print(timesteps)
-    # timestep = timesteps[i]
-    image_path = os.path.join(images_folder, filename)  # Full path to the image
+    # Compute mean and confidence intervals
+    mean_degrees, ci_degrees = compute_mean_and_ci(avg_degrees)
+    mean_betweennesses, ci_betweennesses = compute_mean_and_ci(avg_betweennesses)
+    mean_clustering, ci_clustering = compute_mean_and_ci(avg_clustering_coefficients)
     
-    image = io.imread(image_path)  # Read the image
-    average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(
-        image, tumor_grids[i], show_skeleton=False, show_graph=False, print_results=False
-    )
-
-    results.append({
-        #'run': run + 1,
-        #'final_density': final_density,
-        'average_degree': average_degree,
-        'average_betweenness': average_betweenness,
-        'average_page_rank': average_page_rank,
-        'average_clustering_coefficient': average_cc
-    })
-
-def plot(results, timesteps): 
-    # Extracting network statistics from results
-    average_degrees = [res['average_degree'] for res in results]
-    average_betweennesses = [res['average_betweenness'] for res in results]
-    average_page_ranks = [res['average_page_rank'] for res in results]
-    average_clustering_coefficients = [res['average_clustering_coefficient'] for res in results]
-
-    # Creating a 4-subplot figure
-    fig, axes = plt.subplots(1,3, figsize=(12, 5))
-
-    # Plot each network statistic
-    axes[0].scatter(timesteps, average_degrees, marker='o', label="Average Degree")
+    # Creating a 3-subplot figure
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    
+    # Plot with confidence interval as shaded region
+    axes[0].plot(timesteps, mean_degrees, marker='o', label="Average Degree")
+    axes[0].fill_between(timesteps, mean_degrees - ci_degrees, mean_degrees + ci_degrees, alpha=0.2)
     axes[0].set_xlabel("Timesteps")
     axes[0].set_ylabel("Average Degree")
     axes[0].set_title("Average Degree over Time")
     axes[0].legend()
-
-    axes[1].scatter(timesteps, average_betweennesses, marker='o',label="Average Betweenness")
+    
+    axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
+    axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
     axes[1].set_xlabel("Timesteps")
     axes[1].set_ylabel("Average Betweenness")
     axes[1].set_title("Average Betweenness over Time")
     axes[1].legend()
-
-    axes[2].scatter(timesteps, average_clustering_coefficients, marker='o', label="Avg Clustering Coefficient")
+    
+    axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
+    axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
     axes[2].set_xlabel("Timesteps")
     axes[2].set_ylabel("Average Clustering Coefficient")
     axes[2].set_title("Average Clustering Coefficient over Time")
     axes[2].legend()
-
-    # Adjust layout for better readability
+    
     plt.tight_layout()
     plt.show()
 
-plot(results, timesteps)
+plot(big_results,timesteps)
