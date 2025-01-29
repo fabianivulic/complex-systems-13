@@ -87,7 +87,7 @@ def run_sim():
     bias_factor = 0.93
     decay_factor = 0.99
     breakpoint=350
-    network_steps = 10
+    network_steps = 20
 
     vessel_grid, tumor_grid, final_density, cluster_sizes_over_time, tumor_grids, timesteps = simulate_CA(
     size=200, 
@@ -96,7 +96,7 @@ def run_sim():
     bias_factor=bias_factor, 
     decay_factor=decay_factor, 
     neighborhood_radius=5,
-    tumor_prob=0.5,
+    tumor_prob=0.3,
     wrap_around=False,
     plot=False,
     breakpoint=breakpoint,

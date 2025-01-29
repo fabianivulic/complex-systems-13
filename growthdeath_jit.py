@@ -305,6 +305,18 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             grid_breakpoint[vessel_grid] = 1  # Blood vessels
             grid_breakpoint[tumor_grid] = 2   # Tumor cells
 
+            center = size // 2
+
+            tumor_radius = size / 5
+
+            grid_vessel_breakpoint = np.zeros_like(vessel_grid)
+            rows, cols = vessel_grid.shape
+            x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+            distance = np.sqrt((x - center)**2 + (y - center)**2)
+            mask = distance <= tumor_radius
+
+            grid_vessel_breakpoint[mask] = vessel_grid[mask]
+
         # Combine grids for visualization
         grid = np.zeros((size, size))
         grid[vessel_grid] = 1  # Blood vessels
@@ -348,6 +360,11 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.legend()
         plt.tight_layout()
         plt.show()
+
+        plt.figure()
+        plt.imshow(grid_vessel_breakpoint, cmap=cmap)
+        plt.show()
+
     
     if save_networks:
         return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, tumor_grids, timesteps
