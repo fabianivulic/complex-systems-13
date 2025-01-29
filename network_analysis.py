@@ -83,7 +83,7 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 vessel_grid, tumor_grid, min_entropy, _ = simulate_CA(
                     size=200, 
                     seeds_per_edge=5, 
-                    steps=10, 
+                    steps=350, 
                     bias_factor=0.93, 
                     decay_factor=0.99, 
                     neighborhood_radius=10,
@@ -91,6 +91,7 @@ vessel_grid, tumor_grid, min_entropy, _ = simulate_CA(
                     wrap_around=False,
                     plot=False, 
                     breakpoint=350)
+vessel_image(vessel_grid, 'final_grid.png')
 network_analysis(io.imread('images/final_grid.png'), tumor_grid)
 
 def run_experiments():
