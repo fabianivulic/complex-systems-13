@@ -9,9 +9,10 @@ import random
 from numba import njit
 import time
 import os
-import imageio
+# import imageio
 from matplotlib.animation import FuncAnimation
 from scipy.interpolate import make_interp_spline
+import imageio.v2 as imageio
 
 def initialize_seeds(size, seeds_per_edge=5):
     """

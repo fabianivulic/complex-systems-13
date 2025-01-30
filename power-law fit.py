@@ -19,6 +19,10 @@ def analyze_power_law(cluster_sizes, plot = False):
     fit = powerlaw.Fit(cluster_sizes, discrete=True)
     results["alpha"] = fit.power_law.alpha
     results["xmin"] = fit.power_law.xmin
+    if fit.power_law.xmin <= 0:
+        print(f"Warning: Invalid xmin ({fit.power_law.xmin}), setting to minimum valid value.")
+        fit.power_law.xmin = max(1, fit.power_law.xmin)  # Ensure xmin is at least 1
+
 
    # Compare power law to other distributions
     R_exp, p_exp = fit.distribution_compare('power_law', 'exponential', normalized_ratio=True)
@@ -104,7 +108,7 @@ def simulations(num_simulations, bias_factor):
     for i in range(num_simulations):
         dataset = combine_datasets(10, bias_factor)
         print(f"Analyzing simulation {i+1}...")
-        results = analyze_power_law(dataset, plot=True)
+        results = analyze_power_law(dataset, plot=False)
         
         if results["is_power_law"]:
             powerlaw_count += 1
@@ -137,7 +141,7 @@ def simulations(num_simulations, bias_factor):
         "all_results": all_results,
     }
 
-simulations(2, 0.93)
+# simulations(2, 0.93)
 
 # Testing power-law for different bias values
 test = input("Do you want to test the power-law fit for different bias values? (y/n): ")
@@ -155,32 +159,29 @@ if test.lower() == "y":
         results = simulations(num_simulations, bias_factor=bias)
         experiment_results.append({
             "bias": bias,
-            "proportion_power_law": results["proportion_power_law"],
             "proportion_truncated_power_law": results["proportion_truncated_power_law"],
         })
 
-
     # Print results in table format
     print("\nResults Table:")
-    print("{:<10} {:<25} {:<25}".format("Bias", "Proportion Power Law (%)", "Proportion Truncated Power Law (%)"))
+    print("{:<10} {:<30}".format("Bias", "Proportion Truncated Power Law (%)"))
     for res in experiment_results:
-        print("{:<10.2f} {:<25.2f} {:<25.2f}".format(res["bias"], res["proportion_power_law"], res["proportion_truncated_power_law"]))
-    
+        print("{:<10.2f} {:<30.2f}".format(res["bias"], res["proportion_truncated_power_law"]))
+
     # Plot results
     plt.figure(figsize=(8, 5))
     biases = [res["bias"] for res in experiment_results]
-    proportions_power = [res["proportion_power_law"] for res in experiment_results]
     proportions_truncated = [res["proportion_truncated_power_law"] for res in experiment_results]
-    
-    plt.plot(biases, proportions_power, marker='o', linestyle='-', label='Power Law')
+
     plt.plot(biases, proportions_truncated, marker='s', linestyle='--', label='Truncated Power Law')
-    
+
     plt.xlabel("Bias Factor")
     plt.ylabel("Proportion (%)")
-    plt.title("Power Law and Truncated Power Law Proportions vs. Bias Factor")
+    plt.title("Truncated Power Law Proportions vs. Bias Factor")
     plt.legend()
     plt.grid()
     plt.show()
+
 else:
     print("Ok.")
 
