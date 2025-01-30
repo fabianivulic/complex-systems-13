@@ -79,17 +79,21 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
-
-    # run code, saving the images
-
-def run_sim():
+def run_sim(network_steps = 20):
+    """Run a single simulation
+    Inputs:
+    network_steps: save network every network_steps timesteps
+    
+    Returns:
+    tumor_grids: list of tumor grids over time
+    timesteps: list of timesteps
+    """
     print('run')
     bias_factor = 0.93
     decay_factor = 0.99
     breakpoint=350
-    network_steps = 20
 
-    vessel_grid, tumor_grid, final_density, cluster_sizes_over_time, tumor_grids, timesteps = simulate_CA(
+    vessel_grid, tumor_grid, final_density, cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel, tumor_grids, timesteps = simulate_CA(
     size=200, 
     seeds_per_edge=5, 
     steps=500, 
@@ -105,9 +109,9 @@ def run_sim():
 
     return tumor_grids, timesteps
 
-def run_and_statistics():
+def run_and_statistics(network_steps = 20):
     results = []
-    tumor_grids, timesteps = run_sim()
+    tumor_grids, timesteps = run_sim(network_steps)
     images_folder = "images_time"  # Folder containing images
 
     for i, timestep in enumerate(timesteps):
@@ -128,10 +132,6 @@ def run_and_statistics():
 
     return results, timesteps
 
-big_results = []
-for i in range(10):
-    results, timesteps = run_and_statistics()
-    big_results.append(results)
 
 def compute_mean_and_ci(data, confidence=0.95):
     """
@@ -142,6 +142,24 @@ def compute_mean_and_ci(data, confidence=0.95):
     sem = stats.sem(data, axis=0, nan_policy='omit')  # Standard error of the mean
     ci = sem * stats.t.ppf((1 + confidence) / 2., len(data) - 1)  # Confidence interval
     return mean, ci
+
+def run_mulitple(repeat=10, network_steps=20):
+    """Run multiple simulations
+    Inputs:
+    repeat: number of times to repeat the simulation
+    network_steps: save network every network_steps timesteps
+    
+    Returns:
+    big_results: list of lists of network statistics
+    timesteps: list of timesteps
+    """
+    big_results = []
+
+    for i in range(repeat):
+        results, timesteps = run_and_statistics(network_steps)
+        big_results.append(results)
+
+    return big_results, timesteps
 
 def plot(big_results,timesteps): 
     # Extracting network statistics from big_results (list of lists)
@@ -182,4 +200,5 @@ def plot(big_results,timesteps):
     plt.tight_layout()
     plt.show()
 
+big_results,timesteps = run_mulitple(repeat=10,network_steps=20)
 plot(big_results,timesteps)
