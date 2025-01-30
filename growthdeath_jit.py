@@ -249,7 +249,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False, network_steps=50):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False, network_steps=50, tumor_clusters=False, vessel_clusters=False):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -282,9 +282,11 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     # Initialize tumor cells
     tumor_grid = create_tumor(size, background, tumor_prob, tumor_factor)
     entropies = []
-    cluster_sizes_over_time = []
-    cluster_counts = []
-    
+    cluster_counts_tumor = []
+    cluster_counts_vessel = []
+    cluster_sizes_over_time_tumor = []
+    cluster_sizes_over_time_vessel = []
+
     for i in range(steps):
         new_seeds = []
 
@@ -305,18 +307,6 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             grid_breakpoint[vessel_grid] = 1  # Blood vessels
             grid_breakpoint[tumor_grid] = 2   # Tumor cells
 
-            center = size // 2
-
-            tumor_radius = size / 5
-
-            grid_vessel_breakpoint = np.zeros_like(vessel_grid)
-            rows, cols = vessel_grid.shape
-            x, y = np.meshgrid(np.arange(cols), np.arange(rows))
-            distance = np.sqrt((x - center)**2 + (y - center)**2)
-            mask = distance <= tumor_radius
-
-            grid_vessel_breakpoint[mask] = vessel_grid[mask]
-
         # Combine grids for visualization
         grid = np.zeros((size, size))
         grid[vessel_grid] = 1  # Blood vessels
@@ -331,13 +321,29 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             vessel_image(vessel_grid, filename=f'grid_{i}.png',foldername='images_time')
             tumor_grids.append(tumor_grid)
             timesteps.append(i)
-            
+        
         if i % plot_steps == 0:
-            # Calculate number of tumor clusters
-            tumor_coordinates = set(zip(*np.where(tumor_grid)))
-            cluster_count, cluster_sizes = tumor_clusters(size, tumor_coordinates, wrap_around, plot=False)
-            cluster_sizes_over_time.append(cluster_sizes)
-            cluster_counts.append(cluster_count)
+            if tumor_clusters:
+                tumor_coordinates = set(zip(*np.where(tumor_grid)))
+                cluster_count_tumor, cluster_sizes_tumor = clusters_tumor_vessel(size, tumor_coordinates, wrap_around, plot=False)
+                cluster_sizes_over_time_tumor.append(cluster_sizes_tumor)
+                cluster_counts_tumor.append(cluster_count_tumor)
+            
+            if vessel_clusters:
+                center = size // 2
+                tumor_radius = size / 5
+                grid_vessel_breakpoint = np.zeros_like(vessel_grid)
+                rows, cols = vessel_grid.shape
+                x, y = np.meshgrid(np.arange(cols), np.arange(rows))
+                distance = np.sqrt((x - center)**2 + (y - center)**2)
+                mask = distance <= tumor_radius
+                grid_vessel_breakpoint[mask] = vessel_grid[mask]
+
+                vessel_coordinates = set(zip(*np.where(grid_vessel_breakpoint)))
+                cluster_count_vessel, cluster_sizes_vessel = clusters_tumor_vessel(size, vessel_coordinates, wrap_around, plot=False)
+                cluster_sizes_over_time_vessel.append(cluster_sizes_vessel)
+                cluster_counts_vessel.append(cluster_count_vessel)
+
     
     # Plotting the visualization and tumor entropy, and cluster count over time
     if plot:
@@ -352,25 +358,36 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         plt.imshow(grid_breakpoint, cmap=cmap)
         plt.title("Breakpoint")
 
-        plt.figure()
-        plt.plot(cluster_counts, label="Number of Tumor Clusters", color = "orange")
-        plt.title("Tumor Clustering Over Time")
-        plt.xlabel("Time Step")
-        plt.ylabel("Number of Clusters")
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
+        if tumor_clusters:
+            plt.figure()
+            plt.plot(range(0, steps, plot_steps), cluster_counts_tumor, label="Number of Tumor Clusters", color = "orange")
+            plt.title("Tumor Clustering Over Time")
+            plt.xlabel("Time Step")
+            plt.ylabel("Number of Clusters")
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
+        
+        if vessel_clusters:
+            plt.figure()
+            plt.plot(range(0, steps, plot_steps), cluster_counts_vessel, label="Number of Vessel Clusters", color="blue")
+            plt.title("Vessel Clustering Over Time")
+            plt.xlabel("Time Step")
+            plt.ylabel("Number of Clusters")
+            plt.legend()
+            plt.tight_layout()
+            plt.show()
 
         plt.figure()
         plt.imshow(grid_vessel_breakpoint, cmap=cmap)
+        plt.title("Vessel grid at breakpoint")
         plt.show()
-
     
     if save_networks:
-        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, grid_vessel_breakpoint, tumor_grids, timesteps
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel, tumor_grids, timesteps
     
     else:
-        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time, grid_vessel_breakpoint
+        return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel
 
 def animate_histogram(cluster_sizes_over_time, plot_steps):
     """
@@ -380,8 +397,9 @@ def animate_histogram(cluster_sizes_over_time, plot_steps):
     # Find the maximum frequency across all time steps
     max_frequency = 0
     for cluster_sizes in cluster_sizes_over_time:
-        frequencies, _ = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
-        max_frequency = max(max_frequency, max(frequencies))
+        if cluster_sizes:  # Ensure the list is not empty
+            frequencies, _ = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
+            max_frequency = max(max_frequency, max(frequencies))
 
     # Set up the figure and axis
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -395,8 +413,12 @@ def animate_histogram(cluster_sizes_over_time, plot_steps):
         cluster_sizes = cluster_sizes_over_time[frame]
         
         # Histogram data
-        frequencies, bin_edges = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Compute bin centers
+        if cluster_sizes:  # Ensure the list is not empty
+            frequencies, bin_edges = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
+            bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Compute bin centers
+        else:
+            frequencies, bin_edges = [], []
+            bin_centers = []
         
         # Plot histogram
         ax.hist(cluster_sizes, bins=bin_edges, color="blue", edgecolor="black", alpha=0.7, label="Histogram")
@@ -439,23 +461,24 @@ def vessel_image(grid, filename, foldername="images"):
     bw_fig.savefig(f'{foldername}/{filename}', dpi=300, bbox_inches='tight', pad_inches=0)
     plt.close(bw_fig)
 
-def tumor_clusters(size, tumor_grid, wrap_around = False, plot = True):
+# either tumor_grid or grid_vessel_breakpoint
+def clusters_tumor_vessel(size, grid, wrap_around = False, plot = True):
     """
-    Analyze tumor clustering over time.
+    Analyze tumor or vessel clustering over time.
     Input:
     - size: The size of the grid
-    - tumor_grid: The grid with tumor cells
+    - grid: The grid with tumor or vessel cells
     - wrap_around: A boolean to enable periodic boundaries
     - plot: A boolean to enable plotting
 
     Output:
-    - cluster counts: The number of tumor clusters over time
+    - cluster counts: The number of tumor/vessel clusters over time
     """
     visited = set()
     clusters = 0
     cluster_sizes = []
 
-    for cell in tumor_grid:
+    for cell in grid:
         if cell not in visited:
             # Depth-first search to find all connected tumor cells
             stack = [cell]
@@ -466,7 +489,7 @@ def tumor_clusters(size, tumor_grid, wrap_around = False, plot = True):
                     visited.add((cx, cy))
                     cluster_nodes.append((cx, cy))
                     neighbors = get_neighbors(cx, cy, size, wrap_around)
-                    stack.extend(n for n in neighbors if n in tumor_grid)
+                    stack.extend(n for n in neighbors if n in grid)
 
             if len(cluster_nodes) >= 1: # Minimum cluster size
                 clusters += 1
@@ -492,7 +515,7 @@ def main():
     midpoint_sigmoid = 1
     steepness = 1
 
-    vessel_grid, _, _, cluster_sizes_over_time = simulate_CA(
+    vessel_grid, _, _, cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel = simulate_CA(
         size=size,
         seeds_per_edge=seeds_per_edge,
         steps=steps,
@@ -506,10 +529,13 @@ def main():
         p=p,
         plot_steps=10,
         midpoint_sigmoid=midpoint_sigmoid,
-        steepness=steepness
+        steepness=steepness,
+        tumor_clusters = True,
+        vessel_clusters = True
     )
     vessel_image(vessel_grid, 'final_grid.png')
-    # animate_histogram(cluster_sizes_over_time, 10)
+    animate_histogram(cluster_sizes_over_time_tumor, plot_steps = 10)
+    animate_histogram(cluster_sizes_over_time_vessel, plot_steps = 10)
     
 if __name__ == "__main__":
     start_time = time.time()

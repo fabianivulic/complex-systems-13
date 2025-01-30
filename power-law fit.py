@@ -8,7 +8,7 @@ def analyze_power_law(cluster_sizes, plot = False):
     """
     Analyze the power law distribution of cluster sizes.
     Input:
-    - cluster_sizes: The sizes of the tumor clusters
+    - cluster_sizes: The sizes of the tumor/vessel clusters
     - plot: A boolean to enable plotting
 
     Output:
@@ -22,7 +22,7 @@ def analyze_power_law(cluster_sizes, plot = False):
     results["xmin"] = fit.power_law.xmin
 
     R_list, p_value_list = [], []
-    # Compute goodness of fit metrics
+
     R_exp, p_value_exp = fit.distribution_compare('power_law', 'exponential', normalized_ratio=True)
     R_log, p_value_log = fit.distribution_compare('power_law', 'lognormal', normalized_ratio=True)
     R_tpl, p_value_tpl = fit.distribution_compare('power_law', 'truncated_power_law', normalized_ratio=True)
@@ -31,9 +31,7 @@ def analyze_power_law(cluster_sizes, plot = False):
     R_list.extend([R_exp, R_log, R_tpl, R_lt])
     p_value_list.extend([p_value_exp, p_value_log, p_value_tpl, p_value_lt])    
 
-    #results["R"] = R_list
-    # results["p_value"] = p_value_list
-    results["is_power_law"] = (i in p_value_list < 0.05 for i in p_value_list) and (i in R_list > 0 for i in R_list) 
+    results["is_power_law"] = all(p < 0.05 for p in p_value_list[:3]) and all(R > 0 for R in R_list[:3])
 
     print(f"Estimated alpha: {results['alpha']}")
     print(f"R: {R_list}")
@@ -68,9 +66,10 @@ def combine_datasets(num_datasets):
     """
     combined_dataset = []
     for i in range(num_datasets):
-        _, _, _, cluster_sizes = simulate_CA(plot=False, bias_factor=0.93, tumor_prob=0.3)
-        combined_dataset.extend(cluster_sizes[-1])
+        _, _, _, cluster_sizes_tumor, cluster_sizes_vessel = simulate_CA(plot=False, bias_factor=0.93, tumor_prob=0.3, tumor_clusters=False, vessel_clusters=True)
+        combined_dataset.extend(cluster_sizes_vessel[-1])
         print(f"Dataset {i+1} completed.")
+        print(combine_datasets)
     return combined_dataset
 
 def simulations():
@@ -95,9 +94,10 @@ def simulations():
         bias_factor = float(input("Enter bias factor: "))
         # Run multiple simulations and analyze the power law distribution
         for i in range(num_simulations):
-            _, _, _, cluster_sizes_over_time = simulate_CA(plot = False, bias_factor=bias_factor)
+            dataset = combine_datasets(10)
+            # _, _, _, cluster_sizes_tumor, cluster_sizes_vessel = simulate_CA(plot = False, bias_factor=bias_factor, tumor_clusters=False, vessel_clusters=True)
             print(f"Analyzing simulation {i+1}...")
-            cluster_size = cluster_sizes_over_time[-1]
+            cluster_size = dataset
             results = analyze_power_law(cluster_size, plot=False)
             
             if results["is_power_law"]:
@@ -133,7 +133,7 @@ def simulations():
         results = analyze_power_law(combined_dataset, plot=True)
         return results
 
-#simulations()
+simulations()
 
 # Testing power-law for different bias values
 test = input("Do you want to test the power-law fit for different bias values? (y/n): ")
@@ -178,9 +178,9 @@ def combine_datasets(num_datasets):
     combined_dataset_start = []
     combined_dataset_end = []
     for i in range(num_datasets):
-        _, _, _, cluster_sizes = simulate_CA(plot=False, bias_factor=0.93)
-        combined_dataset_start.extend(cluster_sizes[-1])
-        combined_dataset_end.extend(cluster_sizes[0])
+        _, _, _, cluster_sizes_tumor, cluster_sizes_vessel = simulate_CA(plot = False, bias_factor=0.93, tumor_clusters=False, vessel_clusters=True)
+        combined_dataset_start.extend(cluster_sizes_vessel[70])
+        combined_dataset_end.extend(cluster_sizes_vessel[-1])
         print(f"Dataset {i+1} completed.")
     return combined_dataset_start, combined_dataset_end
 
