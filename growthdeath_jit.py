@@ -360,7 +360,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
 
         if tumor_clusters:
             plt.figure()
-            plt.plot(range(0, steps, plot_steps), cluster_counts_tumor, label="Number of Tumor Clusters", color = "orange")
+            plt.plot(range(0, steps, plot_steps), cluster_counts_tumor, label="Number of Tumor Clusters", color = "green")
             plt.title("Tumor Clustering Over Time")
             plt.xlabel("Time Step")
             plt.ylabel("Number of Clusters")
@@ -370,7 +370,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         
         if vessel_clusters:
             plt.figure()
-            plt.plot(range(0, steps, plot_steps), cluster_counts_vessel, label="Number of Vessel Clusters", color="blue")
+            plt.plot(range(0, steps, plot_steps), cluster_counts_vessel, label="Number of Vessel Clusters", color="red")
             plt.title("Vessel Clustering Over Time")
             plt.xlabel("Time Step")
             plt.ylabel("Number of Clusters")
@@ -379,7 +379,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             plt.show()
 
         plt.figure()
-        plt.imshow(grid_vessel_breakpoint, cmap=cmap)
+        plt.imshow(grid_vessel_breakpoint, cmap='Reds')
         plt.title("Vessel grid at breakpoint")
         plt.show()
     
@@ -389,7 +389,7 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     else:
         return vessel_grid, tumor_grid, entropies[-1], cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel
 
-def animate_histogram(cluster_sizes_over_time, plot_steps):
+def animate_histogram(cluster_sizes_over_time, plot_steps, name, tumor = True):
     """
     Create an animated histogram showing the distribution of cluster sizes over time,
     with a fitted curve overlayed on the bars and a fixed y-axis.
@@ -414,14 +414,18 @@ def animate_histogram(cluster_sizes_over_time, plot_steps):
         
         # Histogram data
         if cluster_sizes:  # Ensure the list is not empty
-            frequencies, bin_edges = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 2))
+            frequencies, bin_edges = np.histogram(cluster_sizes, bins=range(1, max(cluster_sizes) + 10))
             bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2  # Compute bin centers
         else:
             frequencies, bin_edges = [], []
             bin_centers = []
         
         # Plot histogram
-        ax.hist(cluster_sizes, bins=bin_edges, color="blue", edgecolor="black", alpha=0.7, label="Histogram")
+        if tumor:
+            ax.hist(cluster_sizes, bins=bin_edges, color="green", edgecolor="black", alpha=0.7, label="Histogram")
+        else:
+            ax.hist(cluster_sizes, bins=bin_edges, color="red", edgecolor="black", alpha=0.7, label="Histogram")
+
         
         # Fit a smooth curve to the histogram data
         if len(bin_centers) > 3:  # Fit only if enough data points exist
@@ -434,11 +438,12 @@ def animate_histogram(cluster_sizes_over_time, plot_steps):
         ax.set_title(f"Cluster Size Distribution at Time Step {frame * plot_steps}")
         ax.set_xlabel("Cluster Size")
         ax.set_ylabel("Frequency")
-        ax.set_ylim(0, max_frequency + 1)  # Keep the y-axis fixed
+        ax.set_ylim(0, max_frequency + 10)  # Keep the y-axis fixed
         ax.legend()
 
     # Create the animation
     anim = FuncAnimation(fig, update, frames=len(cluster_sizes_over_time), repeat=False)
+    anim.save(name, writer='ffmpeg', dpi=300)
     plt.show()
 
 def vessel_image(grid, filename, foldername="images"):
@@ -527,15 +532,15 @@ def main():
         plot=True,
         breakpoint=breakpoint, 
         p=p,
-        plot_steps=10,
+        plot_steps=5,
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness,
         tumor_clusters = True,
         vessel_clusters = True
     )
     vessel_image(vessel_grid, 'final_grid.png')
-    animate_histogram(cluster_sizes_over_time_tumor, plot_steps = 10)
-    animate_histogram(cluster_sizes_over_time_vessel, plot_steps = 10)
+    animate_histogram(cluster_sizes_over_time_tumor, plot_steps = 5, name = "gif_tumor_cluster.mp4", tumor = True)
+    animate_histogram(cluster_sizes_over_time_vessel, plot_steps = 5, name = "gif_vessel_cluster.mp4", tumor = False)
     
 if __name__ == "__main__":
     start_time = time.time()
