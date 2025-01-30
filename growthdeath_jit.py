@@ -9,6 +9,7 @@ import random
 from numba import njit
 import time
 import os
+import imageio
 from matplotlib.animation import FuncAnimation
 from scipy.interpolate import make_interp_spline
 
@@ -87,7 +88,7 @@ def create_tumor(size, background, tumor_prob, tumor_factor):
                 tumor[x, y] = True
                 background[x, y] += tumor_factor
 
-    return tumor
+    return tumor, background
 
 @njit
 def check_blood(x, y, occupied, radius):
@@ -249,7 +250,7 @@ def shannon_entropy(grid, tumor_grid):
     
     return tumor_density
 
-def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False, network_steps=50, tumor_clusters=False, vessel_clusters=False):
+def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_factor=0.99, neighborhood_radius=10, tumor_prob=0.5, wrap_around=False, plot=True, breakpoint=350, p=0.1, plot_steps = 5, midpoint_sigmoid=1, steepness=1, save_networks=False, network_steps=50, tumor_clusters=False, make_gif=False, vessel_clusters=False, gif_name="growdeath.gif"):
     """
     Run a cellular automata-based angiogenesis model and compute Shannon entropy.
     Input:
@@ -265,9 +266,11 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
     - The Shannon entropy value in the last time step
     """
     background = initialize_background(size)
+    background_initial_grid = background.copy()
     vessel_grid = np.zeros((size, size), dtype=np.bool_) # Need to be separately delineated 
     tumor_grid = np.zeros((size, size), dtype=np.bool_)  # so they can occupy the same space
     tumor_factor = 0.1
+    images = [] if make_gif else None
 
     if save_networks:
         tumor_grids = []
@@ -280,7 +283,10 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
         update_background(background, x, y, decay_factor, neighborhood_radius, wrap_around=False)
     
     # Initialize tumor cells
-    tumor_grid = create_tumor(size, background, tumor_prob, tumor_factor)
+    tumor_grid, background = create_tumor(size, background, tumor_prob, tumor_factor)
+    background_initial_grid_tumor = background.copy()
+    tumor_initial_grid = tumor_grid.copy()
+
     entropies = []
     cluster_counts_tumor = []
     cluster_counts_vessel = []
@@ -322,6 +328,23 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
             tumor_grids.append(tumor_grid)
             timesteps.append(i)
         
+        # Optional, only to make a gif if needed
+        if make_gif and i % 10 == 0:
+            cmap = ListedColormap(["white", "red", "green"])
+            fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+            axes[0].imshow(grid, cmap=cmap)
+            axes[0].set_title("CA")
+            
+            cax = axes[1].imshow(background, cmap='hot', vmin=0, vmax=1)
+            axes[1].set_title("VEGF")
+            fig.colorbar(cax, ax=axes[1], label="VEGF")
+            
+            plt.tight_layout()
+            plt.savefig("frame.png")
+            images.append(imageio.imread("frame.png"))
+            plt.close()
+
+        
         if i % plot_steps == 0:
             if tumor_clusters:
                 tumor_coordinates = set(zip(*np.where(tumor_grid)))
@@ -344,19 +367,45 @@ def simulate_CA(size=200, seeds_per_edge=5, steps=500, bias_factor=0.93, decay_f
                 cluster_sizes_over_time_vessel.append(cluster_sizes_vessel)
                 cluster_counts_vessel.append(cluster_count_vessel)
 
-    
+    if make_gif and images:
+        imageio.mimsave(gif_name, images, duration=0.1)
+        os.remove("frame.png")
+
     # Plotting the visualization and tumor entropy, and cluster count over time
     if plot:
         plt.figure(figsize=(10, 5))
         cmap = ListedColormap(["white", "red", "green"])
         print(f"Number of blood vessel pixels: {np.sum(vessel_grid)}")
         print(f"Number of tumor pixels: {np.sum(tumor_grid)}")
+
         plt.subplot(1, 2, 2)
         plt.imshow(grid, cmap=cmap)
         plt.title("Final")
         plt.subplot(1, 2, 1)
         plt.imshow(grid_breakpoint, cmap=cmap)
         plt.title("Breakpoint")
+        plt.tight_layout()
+        plt.show()
+
+        plt.figure()
+        plt.title("VEGF Initialization")
+        plt.imshow(background_initial_grid, cmap="hot", interpolation='nearest', vmin=0, vmax=1)
+        plt.colorbar(label="VEGF")
+        plt.show()
+
+        plt.figure()
+        plt.title("Proliferating Cells Initialization")
+        plt.imshow(tumor_initial_grid * 2, cmap=cmap, interpolation='nearest')
+        plt.show()
+
+        plt.figure(figsize=(10,5))
+        plt.subplot(1,2,2)
+        plt.title("VEGF Initialization")
+        plt.imshow(background_initial_grid_tumor, cmap="hot", interpolation='nearest', vmin=0, vmax=1)
+        plt.subplot(1,2,1)
+        plt.title("Proliferating Cells Initialization")
+        plt.imshow(tumor_initial_grid * 2, cmap=cmap, interpolation='nearest')
+        plt.show()
 
         if tumor_clusters:
             plt.figure()
@@ -536,7 +585,8 @@ def main():
         midpoint_sigmoid=midpoint_sigmoid,
         steepness=steepness,
         tumor_clusters = True,
-        vessel_clusters = True
+        vessel_clusters = True,
+        make_gif=True
     )
     vessel_image(vessel_grid, 'final_grid.png')
     animate_histogram(cluster_sizes_over_time_tumor, plot_steps = 5, name = "gif_tumor_cluster.mp4", tumor = True)
