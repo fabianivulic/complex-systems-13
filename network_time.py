@@ -181,21 +181,18 @@ def plot(big_results,timesteps):
     axes[0].set_xlabel("Timesteps")
     axes[0].set_ylabel("Average Degree")
     axes[0].set_title("Average Degree over Time")
-    axes[0].legend()
     
     axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
     axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
     axes[1].set_xlabel("Timesteps")
     axes[1].set_ylabel("Average Betweenness")
     axes[1].set_title("Average Betweenness over Time")
-    axes[1].legend()
     
     axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
     axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
     axes[2].set_xlabel("Timesteps")
     axes[2].set_ylabel("Average Clustering Coefficient")
     axes[2].set_title("Average Clustering Coefficient over Time")
-    axes[2].legend()
     
     plt.tight_layout()
     plt.show()

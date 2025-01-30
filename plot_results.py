@@ -2,12 +2,17 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import powerlaw
+import scipy.stats as stats
 
 def plot_network_results(experiment_type):
     metrics = ["average_degree", "average_clustering_coefficient"]
     df = pd.read_csv(f"data/{experiment_type}_results.csv")
     grouped_mean = df.groupby(experiment_type).mean().reset_index()
-    grouped_std = df.groupby(experiment_type).std().reset_index()
+    grouped_sem = df.groupby(experiment_type).sem().reset_index()
+    confidence = 0.95
+    ci_multiplier = stats.t.ppf((1 + confidence) / 2., df.groupby(experiment_type).count().iloc[:, 0] - 1)
+    grouped_ci = grouped_sem.mul(ci_multiplier, axis=0)
+
     _, axes = plt.subplots(1, 3, figsize=(15, 5))
     axes = axes.flatten()
 
@@ -15,7 +20,7 @@ def plot_network_results(experiment_type):
         ax = axes[i]
         x = grouped_mean[experiment_type]
         y = grouped_mean[metric]
-        yerr = grouped_std[metric]
+        yerr = grouped_ci[metric]
         ax.plot(x, y, marker='o', label=f"Mean {metric.replace('_', ' ').title()}")
         ax.fill_between(x, y - yerr, y + yerr, alpha=0.3, label="Standard Deviation")
         ax.set_xlabel(f"{experiment_type.replace('_', ' ').title()}")
@@ -23,7 +28,7 @@ def plot_network_results(experiment_type):
         ax.set_ylabel(metric.replace('_', ' ').title())
     
     axes[2].plot(x, grouped_mean["final_density"], marker='o', label="Mean Final Density")
-    axes[2].fill_between(x, grouped_mean["final_density"] - grouped_std["final_density"], grouped_mean["final_density"] + grouped_std["final_density"], alpha=0.3)
+    axes[2].fill_between(x, grouped_mean["final_density"] - grouped_ci["final_density"], grouped_mean["final_density"] + grouped_ci["final_density"], alpha=0.3)
     axes[2].set_ylabel("Final Tumor Density")
     
     if experiment_type == "bias_factor":
