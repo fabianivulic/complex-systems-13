@@ -77,7 +77,7 @@ python3 network_analysis.py
 ```
 This script calculates network metrics for vascular structures, including average degree and clustering coefficient.
 - `network_analysis`: This function uses SKAN to skeletonize the vascular network image and convert it into a network.
-- 'run_experiments': This function will vary a specified control parameter and run the simulation for a specified number of iterations for each parameter configuration. 
+- `run_experiments`: This function will vary a specified control parameter and run the simulation for a specified number of iterations for each parameter configuration. 
 ---
 
 ### 3.  **Network Time**
@@ -97,4 +97,4 @@ python3 plot_results.py
 ```
 This script plots the data gathered from running network_analysis.py. It grants multiple options for plotting the data:
 - `plot_network_results`: This function plots the average of the network metrics for across varying control parameters.
-- 'plot_scatter': This function plots the final tumor density values against the network metrics of interest, colored by the control parameter values. 
+- `plot_scatter`: This function plots the final tumor density values against the network metrics of interest, colored by the control parameter values. 
