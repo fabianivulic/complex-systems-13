@@ -17,11 +17,7 @@ This project implements a cellular automaton (CA) model to simulate tumor angiog
    - VEGF-driven stochastic angiogenesis.
    - Tumor entropy and clustering analysis.
 
-2. **Complex Length Analysis**  
-   - Measures the lengths of connected tubule complexes in skeletonized images.
-   - Fits power-law distributions to tubule lengths for statistical analysis.
-
-3. **Network Analysis**  
+2. **Network Analysis**  
    - Converts skeletonized images of vascular structures into graph representations.
    - Computes network metrics such as:
      - Average degree
