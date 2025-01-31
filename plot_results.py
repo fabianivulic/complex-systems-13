@@ -1,10 +1,22 @@
+"""
+This file contains functions to plot the results of the experiments, the data for which can be found
+in the data folder. 
+The data was generated using the run_experiments function in the network_analysis.py file.
+Simply run the script and input the experiment type to see the plots.
+"""
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import powerlaw
 import scipy.stats as stats
 
 def plot_network_results(experiment_type):
+    """
+    Plots the average of the network statistics with a 95% confidence interval for the given experiment type.
+    The control parameter is on the x-axis and the network statistic is on the y-axis.
+    Input:
+    experiment_type: str, the type of experiment to plot (bias_factor, prolif_prob, midpoint_sigmoid)
+    No returned value, the plot is displayed.
+    """
     metrics = ["average_degree", "average_clustering_coefficient"]
     df = pd.read_csv(f"data/{experiment_type}_results.csv")
     grouped_mean = df.groupby(experiment_type).mean().reset_index()
@@ -44,53 +56,17 @@ def plot_network_results(experiment_type):
         axes[0].set_xlabel("Sigmoid Midpoint")
         axes[1].set_xlabel("Sigmoid Midpoint")
         axes[2].set_xlabel("Sigmoid Midpoint")
-    elif experiment_type == "steepness":
-        plt.suptitle("Growth/Death Steepness vs. Network Metrics")
-        axes[0].set_xlabel("Steepness")
-        axes[1].set_xlabel("Steepness")
-        axes[2].set_xlabel("Steepness")
     plt.tight_layout()
     plt.show()
 
-def plot_distributions():
-        df = pd.read_csv(f"data/constant_results.csv")
-        metrics = ["average_degree", "average_clustering_coefficient"]
-        _, axes = plt.subplots(2, 2, figsize=(12, 7.5))
-        axes = axes.flatten()
-        for i, metric in enumerate(metrics):
-            ax = axes[i]
-            ax.hist(
-                df[metric],
-                bins=30,
-                color='blue',
-                alpha=0.7
-            )
-            ax.set_xlabel(metric.replace('_', ' ').title())
-            ax.set_ylabel("Frequency")
-            ax.grid(False)
-
-        plt.tight_layout()
-        plt.show()
-        
-        for metric in metrics:
-            fit = powerlaw.Fit(df[metric])
-            plt.figure(figsize=(8, 6))
-            fit.plot_pdf(color='blue', linewidth=0, marker='o')
-            fit.power_law.plot_pdf(color='red', linestyle='--', label=f'Power-Law Fit ($\\alpha={fit.alpha:.2f}$)')
-            print(f"Estimated scaling exponent (alpha): {fit.alpha:.2f}")
-            plt.xlabel(metric.replace('_', ' ').title())
-            plt.ylabel("Frequency")
-            plt.title(f"Power-Law Fit to {metric.replace('_', ' ').title()} Distribution")
-            plt.show()
-            
-            #Compare distributions
-            R1, p1 = fit.distribution_compare('power_law', 'exponential')
-            print(f"R1: {R1}, p1: {p1}")
-            R2, p2 = fit.distribution_compare('power_law', 'lognormal')
-            print(f"R2: {R2}, p2: {p2}")
-            print()
-
 def plot_scatter(experiment_type):
+    """
+    Plots the network metrics against the final tumor density for the given experiment type.
+    The data points are colored by the control parameter.
+    Input:
+    experiment_type: str, the type of experiment to plot (bias_factor, prolif_prob, midpoint_sigmoid)
+    No returned value, the plot is displayed.
+    """
     df = pd.read_csv(f"data/{experiment_type}_results.csv")
     metrics = [
         "average_degree",
@@ -118,8 +94,6 @@ def plot_scatter(experiment_type):
         axes[1].legend(handles, labels, title="Proliferation P", bbox_to_anchor=(1.02, 1.02), loc='upper left')
     elif experiment_type == "midpoint_sigmoid":
         axes[1].legend(handles, labels, title="Sigmoid Midpoint", bbox_to_anchor=(1.02, 1.02), loc='upper left')
-    elif experiment_type == "steepness":
-        axes[1].legend(handles, labels, title="Steepness", bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.suptitle("Final Tumor Density vs. Network Metrics")
     plt.tight_layout()
     plt.show()
@@ -134,6 +108,3 @@ elif experiment_type == "prolif_prob":
 elif experiment_type == "midpoint_sigmoid":
     plot_network_results("midpoint_sigmoid")
     plot_scatter("midpoint_sigmoid")
-elif experiment_type == "steepness":
-    plot_network_results("steepness")
-    plot_scatter("steepness")

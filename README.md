@@ -1,6 +1,6 @@
 # Tumor Angiogenesis Simulation and Analysis
 
-This project implements a cellular automaton (CA) model to simulate tumor angiogenesis, along with tools for analyzing the resulting data. The project includes modules for simulating tumor growth and blood vessel formation, performing network analyses, and visualizing the results.
+This project implements a cellular automaton (CA) model to simulate tumor angiogenesis, along with tools for analyzing the resulting data. The project includes modules for simulating tumor growth and blood vessel formation, performing network analyses, and visualizing the results. This implementation and project was inspired by the model found in Peña et al. (2024). 
 
 ---
 
@@ -20,6 +20,7 @@ This project implements a cellular automaton (CA) model to simulate tumor angiog
    - Computes network metrics such as:
      - Average degree
      - Betweenness centrality
+     - Page Rank
      - Clustering coefficient
 
 4. **Visualization Tools**  
@@ -63,22 +64,22 @@ Parameters include:
 
 ---
 
-### 2. **Complex Length Analysis**
-Analyze tubule structures from simulation output:
-```bash
-python3 complex_length_analysis.py
-```
-This script:
-DESCRIPTION NEEDED.
-
----
-
-### 3. **Network Analysis**
+### 2.  **Network Analysis**
 Perform network-based analysis on skeletonized images:
 ```bash
 python3 network_analysis.py
 ```
 This script calculates network metrics for vascular structures, including average degree and clustering coefficient.
+
+---
+
+### 3.  **Network Time**
+Perform network analysis on multiple visualizations of the vascular structure at different points in
+the simulation
+```bash
+python3 network_time.py
+```
+This script calculates network metrics for vascular structures at different points during the simulation, including average degree, clustering coefficient, and average betweenness centrality.
 
 ---
 

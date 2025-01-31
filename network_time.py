@@ -1,3 +1,11 @@
+"""
+This file contains functions to collect network statistics from images of the blood vessel network
+at different points during the simulation. The frames from the different time points are saved in 
+the images_time folder. The network statistics are calculated using a version of the network_analysis 
+function, similar to the one found in the network_analysis.py file.
+
+Simply run the script to run the simulations and plot the results.
+"""
 import numpy as np
 import pandas as pd
 from skimage import io, color, filters, morphology, transform
@@ -12,6 +20,21 @@ import scipy.stats as stats
 from growthdeath_jit import simulate_CA, vessel_image
 
 def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, print_results=True):
+    """
+    Perform network analysis on the skeletonized image.
+    Input:
+    - image: The original blood vessel image
+    - tumor_grid: The tumor grid
+    - show_skeleton: Whether to show the skeletonized image
+    - show_graph: Whether to show the graph representation
+    - print_results: Whether to print the network analysis results
+    Output:
+    - average_degree: The average degree of the graph
+    - average_betweenness: The average betweenness centrality of the graph
+    - average_page_rank: The average page rank of the graph
+    - average_clustering_coefficient: The average clustering coefficient of the graph
+    - degree_distribution: The degree distribution of the graph
+    """
     # Convert the image to grayscale and binarize
     image = image[:, :, :3]
     image = color.rgb2gray(image)
@@ -80,11 +103,11 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
 def run_sim(network_steps = 20):
-    """Run a single simulation
+    """
+    Run a single simulation, collecting the vessel network image every network_steps timesteps.
     Inputs:
     network_steps: save network every network_steps timesteps
-    
-    Returns:
+    Output:
     tumor_grids: list of tumor grids over time
     timesteps: list of timesteps
     """
@@ -110,6 +133,15 @@ def run_sim(network_steps = 20):
     return tumor_grids, timesteps
 
 def run_and_statistics(network_steps = 20):
+    """
+    This function runs a simulation and collects network statistics at different time points.
+    The network statistics are calculated using the above versionof the network_analysis function.
+    Input:
+    network_steps: save network every network_steps timesteps
+    Output:
+    results: list of dictionaries containing network statistics
+    timesteps: list of timesteps
+    """
     results = []
     tumor_grids, timesteps = run_sim(network_steps)
     images_folder = "images_time"  # Folder containing images
@@ -132,10 +164,15 @@ def run_and_statistics(network_steps = 20):
 
     return results, timesteps
 
-
 def compute_mean_and_ci(data, confidence=0.95):
     """
     Computes the mean and confidence interval for a given list of lists (data over multiple runs).
+    Input:
+    data: list of lists of data
+    confidence: confidence level for the confidence interval
+    Output:
+    mean: mean of the data
+    ci: confidence interval of the data
     """
     data = np.array(data)
     mean = np.mean(data, axis=0)
@@ -144,7 +181,8 @@ def compute_mean_and_ci(data, confidence=0.95):
     return mean, ci
 
 def run_mulitple(repeat=10, network_steps=20):
-    """Run multiple simulations
+    """
+    Run multiple simulations and collect network statistics at different time points.
     Inputs:
     repeat: number of times to repeat the simulation
     network_steps: save network every network_steps timesteps
@@ -162,6 +200,14 @@ def run_mulitple(repeat=10, network_steps=20):
     return big_results, timesteps
 
 def plot(big_results,timesteps): 
+    """
+    Extracts network statistics from the big_results list and plots the average over time with 
+    confidence intervals.
+    Input:
+    big_results: list of lists of network statistics
+    timesteps: list of timesteps
+    Returns nothing, but displays the plot.
+    """
     # Extracting network statistics from big_results (list of lists)
     avg_degrees = [[res['average_degree'] for res in run] for run in big_results]
     avg_betweennesses = [[res['average_betweenness'] for res in run] for run in big_results]

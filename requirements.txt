@@ -1,0 +1,10 @@
+imageio==2.33.1
+matplotlib==3.8.0
+networkx==3.1
+numba==0.59.1
+numpy==1.26.4
+pandas==2.2.1
+powerlaw==1.5
+scikit-image==0.22.0
+scipy==1.13.1
+skan==0.12.2
