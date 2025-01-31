@@ -6,7 +6,6 @@ This project implements a cellular automaton (CA) model to simulate tumor angiog
 
 References:
 [1] A. Niemistö, V. Dunmire, O. Yli-Harja, W. Zhang, and I. Shmulevich, “Analysis of angiogenesis usingin vitroexperiments and stochastic growth models,” Physical Review E, vol. 72, no. 6. American Physical Society (APS), Dec. 16, 2005. doi: 10.1103/physreve.72.062902.
-
 [2] J. U. Legaria-Peña, F. Sánchez-Morales, and Y. Cortés-Poza, “Understanding post-angiogenic tumor growth: Insights from vascular network properties in cellular automata modeling,” Chaos, Solitons &amp; Fractals, vol. 186. Elsevier BV, p. 115199, Sep. 2024. doi: 10.1016/j.chaos.2024.115199.
 ---
 
