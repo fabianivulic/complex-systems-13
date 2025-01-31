@@ -2,6 +2,7 @@
 
 This project implements a cellular automaton (CA) model to simulate tumor angiogenesis, along with tools for analyzing the resulting data. The project includes modules for simulating tumor growth and blood vessel formation, performing network analyses, and visualizing the results. This implementation and project was inspired by the model found in Peña et al. (2024). 
 
+![Demo](images/growdeath.gif)
 ---
 
 ## Features
