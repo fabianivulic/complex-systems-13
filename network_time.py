@@ -1,7 +1,7 @@
 """
 This file contains functions to collect network statistics from images of the blood vessel network
-at different points during the simulation. The frames from the different time points are saved in 
-the images_time folder. The network statistics are calculated using a version of the network_analysis 
+at different points during the simulation. The frames from the different time points are saved in
+the images_time folder. The network statistics are calculated using a version of the network_analysis
 function, similar to the one found in the network_analysis.py file.
 
 Simply run the script to run the simulations and plot the results.
@@ -17,18 +17,19 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-from growthdeath_jit import simulate_CA, vessel_image
+from tumor import simulate_CA, vessel_image
 
 def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, print_results=True):
     """
+    ### Description:
     Perform network analysis on the skeletonized image.
-    Input:
+    ### Input:
     - image: The original blood vessel image
     - tumor_grid: The tumor grid
     - show_skeleton: Whether to show the skeletonized image
     - show_graph: Whether to show the graph representation
     - print_results: Whether to print the network analysis results
-    Output:
+    ### Output:
     - average_degree: The average degree of the graph
     - average_betweenness: The average betweenness centrality of the graph
     - average_page_rank: The average page rank of the graph
@@ -40,12 +41,12 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
     image = color.rgb2gray(image)
     threshold = filters.threshold_otsu(image)
     binary_image = image > threshold
-    
+
     expected_size = (200, 200)
     binary_image = transform.resize(binary_image, expected_size, anti_aliasing=False)
     if binary_image.shape[:2] != expected_size:
         raise ValueError(f"Skeletonized image must be {expected_size}, but got {binary_image.shape[:2]}")
-    
+
     # Skeletonize the image
     skeleton = morphology.skeletonize(binary_image)
     if show_skeleton:
@@ -53,7 +54,7 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
         draw.overlay_skeleton_2d(binary_image, skeleton, dilate=1, axes=ax)
         plt.title("Skeletonized Image")
         plt.show()
-    
+
     skan_skeleton = Skeleton(skeleton)
     multigraph = skeleton_to_nx(skan_skeleton)
 
@@ -102,12 +103,13 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
-def run_sim(network_steps = 20):
+def run_sim(network_steps=20):
     """
+    ### Description:
     Run a single simulation, collecting the vessel network image every network_steps timesteps.
-    Inputs:
+    ### Inputs:
     network_steps: save network every network_steps timesteps
-    Output:
+    ### Output:
     tumor_grids: list of tumor grids over time
     timesteps: list of timesteps
     """
@@ -116,12 +118,12 @@ def run_sim(network_steps = 20):
     decay_factor = 0.99
     breakpoint=350
 
-    vessel_grid, tumor_grid, final_density, cluster_sizes_over_time_tumor, cluster_sizes_over_time_vessel, tumor_grids, timesteps = simulate_CA(
-    size=200, 
-    seeds_per_edge=5, 
-    steps=500, 
-    bias_factor=bias_factor, 
-    decay_factor=decay_factor, 
+    _, _, _, _, _, tumor_grids, timesteps = simulate_CA(
+    size=200,
+    seeds_per_edge=5,
+    steps=500,
+    bias_factor=bias_factor,
+    decay_factor=decay_factor,
     neighborhood_radius=5,
     tumor_prob=0.3,
     wrap_around=False,
@@ -132,13 +134,14 @@ def run_sim(network_steps = 20):
 
     return tumor_grids, timesteps
 
-def run_and_statistics(network_steps = 20):
+def run_and_statistics(network_steps=20):
     """
+    ### Description:
     This function runs a simulation and collects network statistics at different time points.
     The network statistics are calculated using the above versionof the network_analysis function.
-    Input:
+    ### Input:
     network_steps: save network every network_steps timesteps
-    Output:
+    ### Output:
     results: list of dictionaries containing network statistics
     timesteps: list of timesteps
     """
@@ -149,7 +152,7 @@ def run_and_statistics(network_steps = 20):
     for i, timestep in enumerate(timesteps):
         filename = f'grid_{timestep}.png'
         image_path = os.path.join(images_folder, filename)  # Full path to the image
-        
+
         image = io.imread(image_path)  # Read the image
         average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(
             image, tumor_grids[i], show_skeleton=False, show_graph=False, print_results=False
@@ -166,11 +169,12 @@ def run_and_statistics(network_steps = 20):
 
 def compute_mean_and_ci(data, confidence=0.95):
     """
+    ### Description:
     Computes the mean and confidence interval for a given list of lists (data over multiple runs).
-    Input:
+    ### Input:
     data: list of lists of data
     confidence: confidence level for the confidence interval
-    Output:
+    ### Output:
     mean: mean of the data
     ci: confidence interval of the data
     """
@@ -182,12 +186,12 @@ def compute_mean_and_ci(data, confidence=0.95):
 
 def run_mulitple(repeat=10, network_steps=20):
     """
+    ### Description:
     Run multiple simulations and collect network statistics at different time points.
-    Inputs:
+    ### Input:
     repeat: number of times to repeat the simulation
     network_steps: save network every network_steps timesteps
-    
-    Returns:
+    ### Output:
     big_results: list of lists of network statistics
     timesteps: list of timesteps
     """
@@ -199,47 +203,49 @@ def run_mulitple(repeat=10, network_steps=20):
 
     return big_results, timesteps
 
-def plot(big_results,timesteps): 
+def plot(big_results,timesteps):
     """
+    ### Description:
     Extracts network statistics from the big_results list and plots the average over time with 
     confidence intervals.
-    Input:
+    ### Input:
     big_results: list of lists of network statistics
     timesteps: list of timesteps
+    ### Output:
     Returns nothing, but displays the plot.
     """
     # Extracting network statistics from big_results (list of lists)
     avg_degrees = [[res['average_degree'] for res in run] for run in big_results]
     avg_betweennesses = [[res['average_betweenness'] for res in run] for run in big_results]
     avg_clustering_coefficients = [[res['average_clustering_coefficient'] for res in run] for run in big_results]
-    
+
     # Compute mean and confidence intervals
     mean_degrees, ci_degrees = compute_mean_and_ci(avg_degrees)
     mean_betweennesses, ci_betweennesses = compute_mean_and_ci(avg_betweennesses)
     mean_clustering, ci_clustering = compute_mean_and_ci(avg_clustering_coefficients)
-    
+
     # Creating a 3-subplot figure
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    
+
     # Plot with confidence interval as shaded region
     axes[0].plot(timesteps, mean_degrees, marker='o', label="Average Degree")
     axes[0].fill_between(timesteps, mean_degrees - ci_degrees, mean_degrees + ci_degrees, alpha=0.2)
     axes[0].set_xlabel("Timesteps")
     axes[0].set_ylabel("Average Degree")
     axes[0].set_title("Average Degree over Time")
-    
+
     axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
     axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
     axes[1].set_xlabel("Timesteps")
     axes[1].set_ylabel("Average Betweenness")
     axes[1].set_title("Average Betweenness over Time")
-    
+
     axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
     axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
     axes[2].set_xlabel("Timesteps")
     axes[2].set_ylabel("Average Clustering Coefficient")
     axes[2].set_title("Average Clustering Coefficient over Time")
-    
+
     plt.tight_layout()
     plt.show()
 

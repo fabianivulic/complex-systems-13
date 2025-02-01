@@ -1,6 +1,6 @@
 """
 This file contains functions to plot the results of the experiments, the data for which can be found
-in the data folder. 
+in the data folder.
 The data was generated using the run_experiments function in the network_analysis.py file.
 Simply run the script and input the experiment type to see the plots.
 """
@@ -11,10 +11,12 @@ import scipy.stats as stats
 
 def plot_network_results(experiment_type):
     """
+    ### Description:
     Plots the average of the network statistics with a 95% confidence interval for the given experiment type.
     The control parameter is on the x-axis and the network statistic is on the y-axis.
-    Input:
+    ### Input:
     experiment_type: str, the type of experiment to plot (bias_factor, prolif_prob, midpoint_sigmoid)
+    ### Output:
     No returned value, the plot is displayed.
     """
     metrics = ["average_degree", "average_clustering_coefficient"]
@@ -38,11 +40,11 @@ def plot_network_results(experiment_type):
         ax.set_xlabel(f"{experiment_type.replace('_', ' ').title()}")
         ax.grid(False)
         ax.set_ylabel(metric.replace('_', ' ').title())
-    
+
     axes[2].plot(x, grouped_mean["final_density"], marker='o', label="Mean Final Density")
     axes[2].fill_between(x, grouped_mean["final_density"] - grouped_ci["final_density"], grouped_mean["final_density"] + grouped_ci["final_density"], alpha=0.3)
     axes[2].set_ylabel("Final Tumor Density")
-    
+
     if experiment_type == "bias_factor":
         plt.suptitle("Bias Factor vs. Network Metrics")
         axes[2].set_xlabel("Bias Factor")
@@ -61,10 +63,12 @@ def plot_network_results(experiment_type):
 
 def plot_scatter(experiment_type):
     """
+    ### Description:
     Plots the network metrics against the final tumor density for the given experiment type.
     The data points are colored by the control parameter.
-    Input:
+    ### Input:
     experiment_type: str, the type of experiment to plot (bias_factor, prolif_prob, midpoint_sigmoid)
+    ### Output:
     No returned value, the plot is displayed.
     """
     df = pd.read_csv(f"data/{experiment_type}_results.csv")

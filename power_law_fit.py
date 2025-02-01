@@ -2,20 +2,19 @@
 This script analyzes the power-law distribution of tumor and vessel cluster sizes. It includes functions to simulate cluster growth, combine datasets,
 and analyze the resulting cluster sizes for power-law and truncated power-law fits.
 """
-
 import powerlaw
 import numpy as np
 import matplotlib.pyplot as plt
-from growthdeath_jit import simulate_CA
+from tumor import simulate_CA
 
-def analyze_power_law(cluster_sizes, plot = False):
+def analyze_power_law(cluster_sizes, plot=False):
     """
+    ### Description:
     Analyze whether the cluster sizes follow a power law or a truncated power law.
-    Input:
+    ### Input:
     - cluster_sizes: The sizes of the tumor/vessel clusters
     - plot: A boolean to enable plotting
-
-    Output:
+    ### Output:
     - results: A dictionary containing the power-law and truncated power-law test results
     """
     results = {}
@@ -31,30 +30,30 @@ def analyze_power_law(cluster_sizes, plot = False):
     R_exp, p_exp = fit.distribution_compare('power_law', 'exponential', normalized_ratio=True)
     R_log, p_log = fit.distribution_compare('power_law', 'lognormal', normalized_ratio=True)
     R_tpl, p_tpl = fit.distribution_compare('power_law', 'truncated_power_law', normalized_ratio=True)
-    
+
     results["power_law_comparisons"] = {
         "vs_exponential": (R_exp, p_exp),
         "vs_lognormal": (R_log, p_log),
         "vs_truncated_power_law": (R_tpl, p_tpl)
     }
-    
+
     # Check if power law is a good fit
     results["is_power_law"] = all(p < 0.05 for p in [p_exp, p_log, p_tpl]) and all(R > 0 for R in [R_exp, R_log, R_tpl])
-    
+
     # Compare truncated power law to other distributions
     R_tpl_exp, p_tpl_exp = fit.distribution_compare('truncated_power_law', 'exponential', normalized_ratio=True)
     R_tpl_log, p_tpl_log = fit.distribution_compare('truncated_power_law', 'lognormal', normalized_ratio=True)
     R_tpl_pl, p_tpl_pl = fit.distribution_compare('truncated_power_law', 'power_law', normalized_ratio=True)
-    
+
     results["truncated_power_law_comparisons"] = {
         "vs_exponential": (R_tpl_exp, p_tpl_exp),
         "vs_lognormal": (R_tpl_log, p_tpl_log),
         "vs_power_law": (R_tpl_pl, p_tpl_pl)
     }
-    
+
     # Check if truncated power law is a good fit
     results["is_truncated_power_law"] = all(p < 0.05 for p in [p_tpl_exp, p_tpl_log, p_tpl_pl]) and all(R > 0 for R in [R_tpl_exp, R_tpl_log, R_tpl_pl])
-    
+
     print(f"Estimated alpha: {results['alpha']}")
     print(f"Xmin: {results['xmin']}")
     print(f"Power law comparisons: {results['power_law_comparisons']}")
@@ -82,10 +81,11 @@ def analyze_power_law(cluster_sizes, plot = False):
 
     return results
 
-def combine_datasets(num_datasets, bias_factor, tumor = True):
+def combine_datasets(num_datasets, bias_factor, tumor=True):
     """
-    Combine multiple datasets of cluster sizes at the last time step into one. 
-    Input:
+    ### Description:
+    Combine multiple datasets of cluster sizes at the last time step into one.
+    ### Input:
     - num_datasets (int): Number of datasets to combine
     - bias_factor (float): Bias factor for the simulation, influencing cluster growth dynamics.
     - tumor (bool): If True, analyze tumor cluster sizes; if False, analyze vessel cluster sizes.
@@ -104,14 +104,13 @@ def combine_datasets(num_datasets, bias_factor, tumor = True):
 
 def simulations(num_simulations, bias_factor, tumor = True):
     """
+    ### Description:
     Run multiple simulations and analyze whether the resulting cluster sizes follow a power law or truncated power law distribution.
-    
-    Parameters:
+    ### Input:
     - num_simulations (int): Number of simulations to perform.
     - bias_factor (float): Bias factor for the simulation, influencing cluster growth dynamics.
     - tumor (bool): If True, analyze tumor cluster sizes; if False, analyze vessel cluster sizes.
-    
-    Returns:
+    ### Output:
     - dict: A dictionary containing the proportion of simulations that fit a power law or truncated power law,
             as well as statistical information about estimated parameters (alpha, xmin).
     """
@@ -123,22 +122,22 @@ def simulations(num_simulations, bias_factor, tumor = True):
     alphas = []
     x_mins = []
     all_results = []
-    
+
     # Run multiple simulations and analyze the power law distribution
     for i in range(num_simulations):
         dataset = combine_datasets(10, bias_factor, tumor = tumor)
         print(f"Analyzing simulation {i+1}/{num_simulations}...")
         results = analyze_power_law(dataset, plot=False)
-        
+
         if results["is_power_law"]:
             powerlaw_count += 1
         if results["is_truncated_power_law"]:
             truncated_powerlaw_count += 1
-        
+
         alphas.append(results["alpha"])
         x_mins.append(results["xmin"])
         all_results.append(results)
-        
+
     # Compute statistics
     proportion_power_law = (powerlaw_count / num_simulations) * 100
     proportion_truncated_power_law = (truncated_powerlaw_count / num_simulations) * 100
@@ -170,7 +169,7 @@ def test_bias_values():
     num_values = int(input("Enter number of bias factor values: "))
     tumor = input("Analyze tumor (t) or vessel (v) clusters? ")
     num_simulations = int(input("Enter number of simulations per parameter set: "))
-    
+
     bias_factors = np.linspace(min_value, max_value, num_values)
     experiment_results = []
 
@@ -211,4 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
