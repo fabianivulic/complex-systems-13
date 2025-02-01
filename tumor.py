@@ -320,7 +320,7 @@ def simulate_CA(
         new_seeds = []
 
         for x, y in seeds:
-            nx, ny = move_seed(x, y, background, size, bias_factor, tumor_grid)
+            nx, ny = move_seed(x, y, background, size, bias_factor)
             new_seeds.append((nx, ny))
             vessel_grid[nx, ny] = True
             update_background(background, x, y, decay_factor, neighborhood_radius)
@@ -370,7 +370,7 @@ def simulate_CA(
         if i % plot_steps == 0:
             if tumor_clusters:
                 tumor_coordinates = set(zip(*np.where(tumor_grid)))
-                cluster_count_tumor, cluster_sizes_tumor = clusters_tumor_vessel(size, tumor_coordinates, plot=False)
+                cluster_count_tumor, cluster_sizes_tumor = clusters_tumor_vessel(size, tumor_coordinates)
                 cluster_sizes_over_time_tumor.append(cluster_sizes_tumor)
                 cluster_counts_tumor.append(cluster_count_tumor)
 
@@ -385,7 +385,7 @@ def simulate_CA(
                 grid_vessel_breakpoint[mask] = vessel_grid[mask]
 
                 vessel_coordinates = set(zip(*np.where(grid_vessel_breakpoint)))
-                cluster_count_vessel, cluster_sizes_vessel = clusters_tumor_vessel(size, vessel_coordinates, plot=False)
+                cluster_count_vessel, cluster_sizes_vessel = clusters_tumor_vessel(size, vessel_coordinates)
                 cluster_sizes_over_time_vessel.append(cluster_sizes_vessel)
                 cluster_counts_vessel.append(cluster_count_vessel)
 
