@@ -100,3 +100,5 @@ python3 plot_results.py
 This script plots the data gathered from running network_analysis.py. It grants multiple options for plotting the data:
 - `plot_network_results`: This function plots the average of the network metrics for across varying control parameters.
 - `plot_scatter`: This function plots the final tumor density values against the network metrics of interest, colored by the control parameter values. 
+- `compute_mean_and_ci`: Computes the mean and 95% confidence interval for a given list of lists (data over multiple runs).
+- `plot_results_over_time`: Extracts network statistics from the big_results list and plots the average over time with 95% confidence intervals.
