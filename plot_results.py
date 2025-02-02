@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
+import json
 
 def plot_network_results(experiment_type):
     """
@@ -102,7 +103,79 @@ def plot_scatter(experiment_type):
     plt.tight_layout()
     plt.show()
 
-experiment_type = input("Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, steepness): ")
+def compute_mean_and_ci(data, confidence=0.95):
+    """
+    ### Description:
+    Computes the mean and confidence interval for a given list of lists (data over multiple runs).
+    ### Input:
+    data: list of lists of data
+    confidence: confidence level for the confidence interval
+    ### Output:
+    mean: mean of the data
+    ci: confidence interval of the mean
+    """
+    data = np.array(data)
+    mean = np.mean(data, axis=0)
+    sem = stats.sem(data, axis=0, nan_policy='omit')  # Standard error of the mean
+    ci = sem * stats.t.ppf((1 + confidence) / 2., len(data) - 1)  # Confidence interval
+    return mean, ci
+
+def plot_results_over_time():
+    """
+    ### Description:
+    Extracts network statistics from the big_results list and plots the average over time with 
+    confidence intervals.
+    ### Input:
+    big_results: list of lists of network statistics
+    timesteps: list of timesteps
+    ### Output:
+    Returns nothing, but displays the plot.
+    """
+    # Load data from JSON
+    with open("data/results_data_time.json", "r") as f:
+        data = json.load(f)
+
+    # Extract data
+    results_over_time = data["results_multiple_runs"]
+    timesteps = data["timesteps"]
+
+    # Extracting network statistics from big_results (list of lists)
+    avg_degrees = [[res['average_degree'] for res in run] for run in results_over_time]
+    avg_betweennesses = [[res['average_betweenness'] for res in run] for run in results_over_time]
+    avg_clustering_coefficients = [[res['average_clustering_coefficient'] for res in run] for run in results_over_time]
+
+    # Compute mean and confidence intervals
+    mean_degrees, ci_degrees = compute_mean_and_ci(avg_degrees)
+    mean_betweennesses, ci_betweennesses = compute_mean_and_ci(avg_betweennesses)
+    mean_clustering, ci_clustering = compute_mean_and_ci(avg_clustering_coefficients)
+
+    # Creating a 3-subplot figure
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Plot with confidence interval as shaded region
+    axes[0].plot(timesteps, mean_degrees, marker='o', label="Average Degree")
+    axes[0].fill_between(timesteps, mean_degrees - ci_degrees, mean_degrees + ci_degrees, alpha=0.2)
+    axes[0].set_xlabel("Timesteps")
+    axes[0].set_ylabel("Average Degree")
+    axes[0].set_title("Average Degree over Time")
+
+    axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
+    axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
+    axes[1].set_xlabel("Timesteps")
+    axes[1].set_ylabel("Average Betweenness")
+    axes[1].set_title("Average Betweenness over Time")
+
+    axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
+    axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
+    axes[2].set_xlabel("Timesteps")
+    axes[2].set_ylabel("Average Clustering Coefficient")
+    axes[2].set_title("Average Clustering Coefficient over Time")
+
+    plt.tight_layout()
+    plt.show()
+
+experiment_type = input("Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, networks_over_time): ")
+
 if experiment_type == "bias_factor":
     plot_network_results("bias_factor")
     plot_scatter("bias_factor")
@@ -112,3 +185,5 @@ elif experiment_type == "prolif_prob":
 elif experiment_type == "midpoint_sigmoid":
     plot_network_results("midpoint_sigmoid")
     plot_scatter("midpoint_sigmoid")
+elif experiment_type == "networks_over_time":
+    plot_results_over_time()

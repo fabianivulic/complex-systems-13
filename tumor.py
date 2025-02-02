@@ -346,7 +346,6 @@ def simulate_CA(
         entropies.append(entropy)
 
         if save_networks and i % network_steps == 0:
-            print('here')
             vessel_image(vessel_grid, filename=f'grid_{i}.png',foldername='images_time')
             tumor_grids.append(tumor_grid)
             timesteps.append(i)

@@ -46,10 +46,13 @@ This project implements a cellular automaton (CA) model to simulate tumor angiog
   - `scipy`
   - `numba`
   - `skan`
+  - `os`
+  - `scipy`
+  - `json`
 
 Install dependencies via pip:
 ```bash
-pip install numpy matplotlib scikit-image pandas networkx powerlaw scipy numba skan
+pip install numpy matplotlib scikit-image pandas networkx powerlaw scipy numba skan os scipy json
 ```
 
 ---
@@ -74,15 +77,7 @@ python3 network_analysis.py
 This script calculates network metrics for vascular structures, including average degree and clustering coefficient.
 - `network_analysis`: This function uses SKAN to skeletonize the vascular network image and convert it into a network.
 - `run_experiments`: This function will vary a specified control parameter and run the simulation for a specified number of iterations for each parameter configuration. 
----
-
-### 3.  **Network Time**
-Perform network analysis on multiple visualizations of the vascular structure at different points in
-the simulation
-```bash
-python3 network_time.py
-```
-This script calculates network metrics for vascular structures at different points during the simulation, including average degree, clustering coefficient, and average betweenness centrality.
+- `run_and_statistics`: This function runs a simulation and collects network statistics at different time points.
 
 ---
 
