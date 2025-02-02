@@ -219,10 +219,10 @@ def move_seed(x, y, background, size, bias_factor):
     return move_probabilities[0][1], move_probabilities[0][2]
 
 @njit
-def shannon_entropy(grid, tumor_grid):
+def compute_density(grid, tumor_grid):
     """
     ### Description:
-    Compute Shannon entropy for a grid considering 3 states and limiting the region to tumor radius.
+    Compute tumor density for a grid considering 3 states and limiting the region to tumor radius.
     ### Input:
     - grid: The grid with tumor cells and blood vessels
     - tumor_grid: The grid with only tumor cells
@@ -342,7 +342,7 @@ def simulate_CA(
         grid[tumor_grid] = 2   # Tumor cells
 
         # Calculate entropy for tumor cells
-        entropy = shannon_entropy(grid, tumor_grid.astype(np.float64))
+        entropy = compute_density(grid, tumor_grid.astype(np.float64))
         entropies.append(entropy)
 
         if save_networks and i % network_steps == 0:

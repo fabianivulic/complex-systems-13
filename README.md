@@ -60,13 +60,24 @@ pip install numpy matplotlib scikit-image pandas networkx powerlaw scipy numba s
 ## Usage
 
 ### 1. **Simulating Tumor Angiogenesis**
-Run the `growthdeath_jit.py` script to simulate angiogenesis:
+Run the `tumor.py` script to simulate angiogenesis:
 ```bash
-python3 growthdeath_jit.py
+python3 tumor.py
 ```
 Parameters include:
-- `temp`: ADD ALL FINAL PARAMETERS HERE.
-
+- `initialize_seeds`: Generates a list of seeds evenly distributed along the four edges. Order is left, right, top, bottom.
+- `initialize_background`: Initialize a background grid with VEGF concentrated at the center.
+- `create_tumor`: Creates the list of coordinates for the tumor.
+- `check_blood`: Checks the number of blood vessels surrounding a tumor cell.
+- `growth_death`: Determines growth/death of tumor cells based on how many blood vessels cells surround it.
+- `get_neighbors`: Returns neighboring positions with periodic boundaries if enabled.
+- `update_background`: Decrease the background values using a Gaussian weight in a circular neighborhood with maximal decay at the center.
+- `move_seed`: Move seed based on stochastic angiogenesis rules.
+- `compute_density`: Compute tumor density for a grid considering 3 states and limiting the region to tumor radius.
+- `simulate_CA`: The main model simulation. Simulates a cellular automaton-based angiogenesis model, incorporating tumor growth, vessel formation, and entropy calculation.
+- `animate_histogram`: Generates an animated histogram to visualize the distribution of cluster sizes over time, with an optional fitted curve.
+- `vessel_image`: Generates and saves a grayscale image representation of the vessel grid.
+- `clusters_tumor_vessel`: Analyzes tumor or vessel clustering over time.
 ---
 
 ### 2.  **Network Analysis**

@@ -2,7 +2,7 @@
 This file contains functions to plot the results of the experiments, the data for which can be found
 in the data folder.
 The data was generated using the run_experiments function in the network_analysis.py file.
-Simply run the script and input the experiment type to see the plots.
+Simply run the script and input the experiment type. The resulting plots will be saved in the plots folder.
 """
 import numpy as np
 import pandas as pd
@@ -47,20 +47,20 @@ def plot_network_results(experiment_type):
     axes[2].set_ylabel("Final Tumor Density")
 
     if experiment_type == "bias_factor":
-        plt.suptitle("Bias Factor vs. Network Metrics")
+        plt.suptitle("Bias Factor vs. Network Metrics \n (95% Confidence Interval)")
         axes[2].set_xlabel("Bias Factor")
     elif experiment_type == "prolif_prob":
-        plt.suptitle("Proliferation Probability vs. Network Metrics")
+        plt.suptitle("Proliferation Probability vs. Network Metrics \n (95% Confidence Interval)")
         axes[0].set_xlabel("Proliferation Probability")
         axes[1].set_xlabel("Proliferation Probability")
         axes[2].set_xlabel("Proliferation Probability")
     elif experiment_type == "midpoint_sigmoid":
-        plt.suptitle("Sigmoid Midpoint vs. Network Metrics")
+        plt.suptitle("Sigmoid Midpoint vs. Network Metrics \n (95% Confidence Interval)")
         axes[0].set_xlabel("Sigmoid Midpoint")
         axes[1].set_xlabel("Sigmoid Midpoint")
         axes[2].set_xlabel("Sigmoid Midpoint")
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f"plots/{experiment_type}_network_results.png")
 
 def plot_scatter(experiment_type):
     """
@@ -101,7 +101,7 @@ def plot_scatter(experiment_type):
         axes[1].legend(handles, labels, title="Sigmoid Midpoint", bbox_to_anchor=(1.02, 1.02), loc='upper left')
     plt.suptitle("Final Tumor Density vs. Network Metrics")
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f"plots/{experiment_type}_scatter_results.png")
 
 def compute_mean_and_ci(data, confidence=0.95):
     """
@@ -157,22 +157,22 @@ def plot_results_over_time():
     axes[0].fill_between(timesteps, mean_degrees - ci_degrees, mean_degrees + ci_degrees, alpha=0.2)
     axes[0].set_xlabel("Timesteps")
     axes[0].set_ylabel("Average Degree")
-    axes[0].set_title("Average Degree over Time")
+    axes[0].set_title("Average Degree over Time \n (95% Confidence Interval)")
 
     axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
     axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
     axes[1].set_xlabel("Timesteps")
     axes[1].set_ylabel("Average Betweenness")
-    axes[1].set_title("Average Betweenness over Time")
+    axes[1].set_title("Average Betweenness over Time \n (95% Confidence Interval)")
 
     axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
     axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
     axes[2].set_xlabel("Timesteps")
     axes[2].set_ylabel("Average Clustering Coefficient")
-    axes[2].set_title("Average Clustering Coefficient over Time")
+    axes[2].set_title("Average Clustering Coefficient over Time \n (95% Confidence Interval)")
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("plots/network_metrics_over_time.png")
 
 experiment_type = input("Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, networks_over_time): ")
 
