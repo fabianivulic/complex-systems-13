@@ -150,6 +150,7 @@ def run_experiments():
     Run the experiments for the different control parameters.
     Data from the experiments is saved in the data folder.
     No input or output arguments.
+    Saves the data in the data folder.
     """
     experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, networks_over_time): ')
     num_runs = int(input('Enter the number of runs for each experimental value: '))
