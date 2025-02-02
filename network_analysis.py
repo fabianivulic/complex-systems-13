@@ -11,6 +11,8 @@ from skan import draw, Skeleton
 from skan.csr import skeleton_to_nx
 import networkx as nx
 from tumor import simulate_CA, vessel_image
+import scipy.stats as stats
+import os
 
 def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, print_results=True):
     """
@@ -96,13 +98,136 @@ def network_analysis(image, tumor_grid, show_skeleton=True, show_graph=True, pri
 
     return average_degree, average_betweenness, average_page_rank, average_clustering_coefficient, degree_distribution
 
+def compute_mean_and_ci(data, confidence=0.95):
+    """
+    ### Description:
+    Computes the mean and confidence interval for a given list of lists (data over multiple runs).
+    ### Input:
+    data: list of lists of data
+    confidence: confidence level for the confidence interval
+    ### Output:
+    mean: mean of the data
+    ci: confidence interval of the mean
+    """
+    data = np.array(data)
+    mean = np.mean(data, axis=0)
+    sem = stats.sem(data, axis=0, nan_policy='omit')  # Standard error of the mean
+    ci = sem * stats.t.ppf((1 + confidence) / 2., len(data) - 1)  # Confidence interval
+    return mean, ci
+
+def run_sim(network_steps=20):
+    """
+    ### Description:
+    Run a single simulation, collecting the vessel network image every network_steps timesteps.
+    ### Inputs:
+    network_steps: save network every network_steps timesteps
+    ### Output:
+    tumor_grids: list of tumor grids over time
+    timesteps: list of timesteps
+    """
+    _, _, _, _, _, tumor_grids, timesteps = simulate_CA(
+    size=200,
+    seeds_per_edge=5,
+    steps=500,
+    bias_factor=0.93,
+    decay_factor=0.99,
+    neighborhood_radius=5,
+    tumor_prob=0.3,
+    plot=False,
+    breakpoint=350,
+    save_networks=True,
+    network_steps=network_steps)
+
+    return tumor_grids, timesteps
+
+def run_and_statistics(network_steps=20):
+    """
+    ### Description:
+    This function runs a simulation and collects network statistics at different time points.
+    The network statistics are calculated using the above versionof the network_analysis function.
+    ### Input:
+    network_steps: save network every network_steps timesteps
+    ### Output:
+    results: list of dictionaries containing network statistics
+    timesteps: list of timesteps
+    """
+    results = []
+    tumor_grids, timesteps = run_sim(network_steps)
+    images_folder = "images_time"  # Folder containing images
+
+    for i, timestep in enumerate(timesteps):
+        filename = f'grid_{timestep}.png'
+        image_path = os.path.join(images_folder, filename)  # Full path to the image
+
+        image = io.imread(image_path)  # Read the image
+        average_degree, average_betweenness, average_page_rank, average_cc, _ = network_analysis(
+            image, tumor_grids[i], show_skeleton=False, show_graph=False, print_results=False
+        )
+
+        results.append({
+            'average_degree': average_degree,
+            'average_betweenness': average_betweenness,
+            'average_page_rank': average_page_rank,
+            'average_clustering_coefficient': average_cc
+        })
+
+    return results, timesteps
+
+def plot_results_over_time(results_over_time,timesteps):
+    """
+    ### Description:
+    Extracts network statistics from the big_results list and plots the average over time with 
+    confidence intervals.
+    ### Input:
+    big_results: list of lists of network statistics
+    timesteps: list of timesteps
+    ### Output:
+    Returns nothing, but displays the plot.
+    """
+    # Extracting network statistics from big_results (list of lists)
+    avg_degrees = [[res['average_degree'] for res in run] for run in results_over_time]
+    avg_betweennesses = [[res['average_betweenness'] for res in run] for run in results_over_time]
+    avg_clustering_coefficients = [[res['average_clustering_coefficient'] for res in run] for run in results_over_time]
+
+    # Compute mean and confidence intervals
+    mean_degrees, ci_degrees = compute_mean_and_ci(avg_degrees)
+    mean_betweennesses, ci_betweennesses = compute_mean_and_ci(avg_betweennesses)
+    mean_clustering, ci_clustering = compute_mean_and_ci(avg_clustering_coefficients)
+
+    # Creating a 3-subplot figure
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    # Plot with confidence interval as shaded region
+    axes[0].plot(timesteps, mean_degrees, marker='o', label="Average Degree")
+    axes[0].fill_between(timesteps, mean_degrees - ci_degrees, mean_degrees + ci_degrees, alpha=0.2)
+    axes[0].set_xlabel("Timesteps")
+    axes[0].set_ylabel("Average Degree")
+    axes[0].set_title("Average Degree over Time")
+
+    axes[1].plot(timesteps, mean_betweennesses, marker='o', label="Average Betweenness")
+    axes[1].fill_between(timesteps, mean_betweennesses - ci_betweennesses, mean_betweennesses + ci_betweennesses, alpha=0.2)
+    axes[1].set_xlabel("Timesteps")
+    axes[1].set_ylabel("Average Betweenness")
+    axes[1].set_title("Average Betweenness over Time")
+
+    axes[2].plot(timesteps, mean_clustering, marker='o', label="Average Clustering Coefficient")
+    axes[2].fill_between(timesteps, mean_clustering - ci_clustering, mean_clustering + ci_clustering, alpha=0.2)
+    axes[2].set_xlabel("Timesteps")
+    axes[2].set_ylabel("Average Clustering Coefficient")
+    axes[2].set_title("Average Clustering Coefficient over Time")
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 def run_experiments():
     """
     Run the experiments for the different control parameters.
     Data from the experiments is saved in the data folder.
     No input or output arguments.
     """
-    experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid): ')
+    experiment_type = input('Enter the experiment type (bias_factor, prolif_prob, midpoint_sigmoid, networks_over_time): ')
     num_runs = int(input('Enter the number of runs for each experimental value: '))
 
     if experiment_type == 'bias_factor':
@@ -121,7 +246,6 @@ def run_experiments():
                     decay_factor=decay_factor,
                     neighborhood_radius=5,
                     tumor_prob=0.5,
-                    wrap_around=False,
                     plot=False,
                     breakpoint=breakpoint,
                     p=0.1,
@@ -163,7 +287,6 @@ def run_experiments():
                     decay_factor=decay_factor,
                     neighborhood_radius=5,
                     tumor_prob=0.5,
-                    wrap_around=False,
                     plot=False,
                     breakpoint=breakpoint,
                     p=prolif_prob,
@@ -205,7 +328,6 @@ def run_experiments():
                     decay_factor=decay_factor,
                     neighborhood_radius=5,
                     tumor_prob=0.5,
-                    wrap_around=False,
                     plot=False,
                     breakpoint=breakpoint,
                     p=0.1,
@@ -230,4 +352,15 @@ def run_experiments():
         df = pd.DataFrame(results)
         df.to_csv(f'data/{experiment_type}_results_1.csv', index=False)
 
+    elif experiment_type == 'networks_over_time':
+        results_multiple_runs = []
+
+        for run in range(num_runs):
+            results, timesteps = run_and_statistics(network_steps=20)
+            results_multiple_runs.append(results)
+
+        plot_results_over_time(results_multiple_runs,timesteps)
+
 run_experiments()
+
+
